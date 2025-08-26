@@ -1,4 +1,4 @@
-package net.sphuta.tms.respository;
+package net.sphuta.tms.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import net.sphuta.tms.entity.TmsEntity;
