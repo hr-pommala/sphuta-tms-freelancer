@@ -191,9 +191,6 @@ SOFTWARE.
   * `amount_due = total - Σ(payments.amount)` (see `v_invoice_amounts`)
 * **Manual lines** work because `invoice_line_items.time_entry_id` is **nullable** and has a partial unique index for non-null values.
 
-Happy shipping! 🚀
-
-```
 
 If you want, I can also drop this into a `README.md` in a canvas file so you can tweak and export directly.
 ```
