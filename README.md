@@ -1,2 +1,2 @@
 # Sphuta-TMS
-SPHUTA Timesheet Management System
+SPHUTA - TMS community system for Freelancer edition
