@@ -1,4 +1,4 @@
-package net.sphuta.tms.service;
+package net.sphuta.tms.freelancer.service;
 
 public interface TmsService  {
     String getServiceStatus();
