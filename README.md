@@ -1,14 +1,8 @@
-# Sphuta-TMS
-SPHUTA - TMS community system for Freelancer edition
-
-Here’s a ready-to-drop **README.md** you can use on GitHub.
-
-```markdown
 # Sphuta TMS — Freelancer (Community Edition)
 
-Time & invoicing made simple for solo builders. This repo contains the **Freelancer** edition of Sphuta TMS: database schema, seed data, and API usage guides (cURL cheat-sheets).
+Time & invoicing made simple for solo builders. This repo contains the Freelancer edition of Sphuta TMS: database schema, seed data, and API usage guides (cURL cheat-sheets).
 
-> **What’s inside**
+> What’s inside
 > - PostgreSQL schema (plain DDL, no triggers) aligned to the current UI and cURLs  
 > - Seed data for quick demos  
 > - Docs & examples for Clients, Projects, Timesheets, Invoices, Profile/Settings, Help
@@ -17,13 +11,13 @@ Time & invoicing made simple for solo builders. This repo contains the **Freelan
 
 ## Features
 
-- **Clients**: rich contact fields, structured address, per-client preferences, active/archive
-- **Projects**: code, hourly rate, start/end dates, description, active/archive
-- **Time**: weekly timesheets and daily entries (hours or start/end), edits allowed after “submit”
-- **Invoices**: from time entries *or* manual lines (rate × qty), taxes/discounts, payments, status flow
-- **Settings & Profile**: invoicing, time-tracking, branding, logo upload URL, profile basics
-- **Support**: simple local ticket/messages tables (optional)
-- **Recurrence**: storage for recurring invoices (optional)
+- Clients: rich contact fields, structured address, per-client preferences, active/archive
+- Projects: code, hourly rate, start/end dates, description, active/archive
+- Time: weekly timesheets and daily entries (hours or start/end), edits allowed after “submit”
+- Invoices: from time entries *or* manual lines (rate × qty), taxes/discounts, payments, status flow
+- Settings & Profile: invoicing, time-tracking, branding, logo upload URL, profile basics
+- Support: simple local ticket/messages tables (optional)
+- Recurrence: storage for recurring invoices (optional)
 
 ---
 
