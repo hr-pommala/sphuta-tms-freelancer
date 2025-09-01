@@ -23,7 +23,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
         info = @Info(title = "Sphuta TMS Freelancer API",
                 version = "v1",
                 description = "Clients, Time-Entries, Invoices, Estimates"))
-public class TmsApiConfig {
+public class TmsFreelancerApiConfig {
 
     /** ObjectMapper with Java Time support. */
     @Bean

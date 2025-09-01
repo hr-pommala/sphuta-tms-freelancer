@@ -21,7 +21,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  */
 @Slf4j
 @SpringBootApplication
-public class TmsApplication {
+public class TmsClientApplication {
 
 	/**
 	 * Main method — application entry point.
@@ -46,7 +46,7 @@ public class TmsApplication {
 		log.info("Starting Sphuta TMS application");
 
 		// Bootstrapping the Spring Boot application context
-		SpringApplication.run(TmsApplication.class, args);
+		SpringApplication.run(TmsClientApplication.class, args);
 
 		// Block-level comment: log after application has started successfully
 		log.info("Sphuta TMS application started successfully");

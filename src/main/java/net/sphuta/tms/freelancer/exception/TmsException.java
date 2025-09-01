@@ -1,25 +1,32 @@
 package net.sphuta.tms.freelancer.exception;
 
 import lombok.extern.slf4j.Slf4j;
-import net.sphuta.tms.freelancer.dto.TmsDto;
+import net.sphuta.tms.freelancer.dto.TmsApiError;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 
 /**
- * Custom domain exception for TMS (Time Management System).
+ * ==========================================================
+ * TmsException
+ * ==========================================================
+ *
+ * Custom domain exception for the TMS (Time Management System).
  *
  * Purpose:
- * - Represents business/domain errors with an associated HTTP status code.
- * - Provides a utility to convert itself into a standardized {@link TmsDto.ApiError}
- *   for consistent API error responses.
+ * - Represents business/domain errors with an associated {@link HttpStatus}.
+ * - Used throughout services/controllers to signal error conditions
+ *   in a way that maps cleanly to REST API responses.
  *
- * Logging:
- * - Logs exception creation with the HTTP status and message.
+ * Integration:
+ * - Handled globally by {@link GlobalExceptionHandler} to produce
+ *   consistent {@link net.sphuta.tms.freelancer.response.TmsApiResponse} JSON.
  */
 @Slf4j
 public class TmsException extends RuntimeException {
 
     /** The HTTP status code associated with this exception. */
-    private final HttpStatus status;
+    @Autowired
+    private HttpStatus status;
 
     // ----------------------- CONSTRUCTORS -----------------------
 
@@ -27,12 +34,12 @@ public class TmsException extends RuntimeException {
      * Constructs a new {@code TmsException}.
      *
      * @param status  HTTP status to associate with this exception
-     * @param message detailed error message
+     * @param message detailed error message (safe for API clients)
      */
     public TmsException(HttpStatus status, String message) {
         super(message);
-        this.status = status;
-        log.warn("Created TmsException with status={} and message='{}'", status, message);
+        this.status = status != null ? status : HttpStatus.BAD_REQUEST;
+        log.error("Created TmsException with status={} and message='{}'", this.status, message);
     }
 
     // ----------------------- GETTERS -----------------------
@@ -49,15 +56,18 @@ public class TmsException extends RuntimeException {
     // ----------------------- UTILITY METHODS -----------------------
 
     /**
-     * Converts this exception into an {@link TmsDto.ApiError}.
+     * Converts this exception into a structured {@link TmsApiError}.
+     * Useful when you want to manually build an error response
+     * (though normally handled by {@link GlobalExceptionHandler}).
      *
      * @param path the request path where the error occurred
-     * @return structured ApiError containing details of this exception
+     * @return structured {@link TmsApiError} containing details of this exception
      */
-    public TmsDto.ApiError toApiError(String path) {
-        log.debug("Converting TmsException (status={}, message='{}') to ApiError for path={}", status, getMessage(), path);
+    public TmsApiError toApiError(String path) {
+        log.error("Converting TmsException (status={}, message='{}') to ApiError for path={}",
+                status, getMessage(), path);
 
-        return TmsDto.ApiError.builder()
+        return TmsApiError.builder()
                 .error(status.getReasonPhrase())
                 .message(getMessage())
                 .path(path)
