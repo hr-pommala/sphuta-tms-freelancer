@@ -1,29 +1,33 @@
 spring:
   datasource:
-    url: jdbc:mysql://localhost:3306/sphuta_freelancer?createDatabaseIfNotExist=true&serverTimezone=UTC
+    url: jdbc:mysql://localhost:3306/sphuta_freelancer?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
     username: root
     password: root
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: update           # Automatically creates/updates schema (dev use only, avoid in prod)
     properties:
       hibernate:
-        format_sql: true
-    open-in-view: false
+        dialect: org.hibernate.dialect.MySQL8Dialect
+        format_sql: true         # Pretty-print SQL in logs
+    open-in-view: false          # Disable session-in-view for cleaner transaction boundaries
   mvc:
-    problemdetails:
-      enabled: true
+    format:
+      date: iso                  # Enforces ISO date format for @DateTimeFormat
+
+server:
+  port: 8080                     # Application runs on http://localhost:8080
 
 logging:
   level:
-    root: INFO
-    net.sphuta.tms: DEBUG
+    root: INFO                   # Default log level
+    org.hibernate.SQL: INFO      # Log SQL queries (DEBUG would show bind parameters too)
 
-server:
-  port: 8080
-
+# Swagger / OpenAPI config
 springdoc:
-  swagger-ui:
-    path: /swagger-ui
   api-docs:
-    path: /v3/api-docs
+    enabled: true
+    path: /v3/api-docs           # JSON/YAML spec served here
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html       # Swagger UI available at http://localhost:8080/swagger-ui.html

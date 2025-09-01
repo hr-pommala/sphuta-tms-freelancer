@@ -147,15 +147,16 @@ public class TmsClientController {
         long _tookMs = (System.nanoTime() - _startNs) / 1_000_000L;
 
         return match
-                .map(m -> {
-                    log.info("Client {} found ({} ms)", id, _tookMs);
-                    return ResponseEntity.ok(TmsApiResponse.success(HttpStatus.OK, TmsMessages.MSG_CLIENT_FETCHED, m));
-                })
-                .orElseGet(() -> {
-                    log.warn(TmsMessages.ERR_CLIENT_NOT_FOUND + " ({} ms)", _tookMs);
-                    return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                            .body(TmsApiResponse.error(HttpStatus.NOT_FOUND, TmsMessages.ERR_CLIENT_NOT_FOUND));
-                });
+                .map(m -> ResponseEntity.ok(
+                        TmsApiResponse.success(HttpStatus.OK, TmsMessages.MSG_CLIENT_FETCHED, m)
+                ))
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(TmsApiResponse.<TmsClientDto>error(
+                                HttpStatus.NOT_FOUND,
+                                TmsMessages.ERR_CLIENT_NOT_FOUND
+                        )));
+
+
     }
 
     // ------------------------------------------------------------------------

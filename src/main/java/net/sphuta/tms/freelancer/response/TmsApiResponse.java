@@ -6,19 +6,9 @@ import org.springframework.http.HttpStatus;
 import java.time.LocalDateTime;
 
 /**
- * ==========================================================
- * TmsApiResponse
- * ==========================================================
+ * Standardized API response wrapper for all endpoints in the Freelancer edition.
  *
- * Unified API Response wrapper (using record).
- * Provides consistency across success and error cases.
- *
- * @param success    true if request handled successfully
- * @param statusCode numeric HTTP status code
- * @param status     HTTP reason phrase
- * @param message    developer/user-friendly message
- * @param data       response payload (may be null on error)
- * @param timestamp  time response created
+ * @param <T> The type of the payload (success data or validation details)
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record TmsApiResponse<T>(
@@ -31,13 +21,13 @@ public record TmsApiResponse<T>(
 ) {
 
     /**
-     * Factory for success response with data.
+     * Factory method for a successful response.
      */
-    public static <T> TmsApiResponse<T> success(HttpStatus httpStatus, String message, T data) {
+    public static <T> TmsApiResponse<T> success(HttpStatus status, String message, T data) {
         return new TmsApiResponse<>(
                 true,
-                httpStatus.value(),
-                httpStatus.getReasonPhrase(),
+                status.value(),
+                status.getReasonPhrase(),
                 message,
                 data,
                 LocalDateTime.now()
@@ -45,13 +35,27 @@ public record TmsApiResponse<T>(
     }
 
     /**
-     * Factory for error response (no data).
+     * Factory method for a failure/validation error response.
      */
-    public static <T> TmsApiResponse<T> error(HttpStatus httpStatus, String message) {
+    public static <T> TmsApiResponse<T> failure(HttpStatus status, String message, T errors) {
         return new TmsApiResponse<>(
                 false,
-                httpStatus.value(),
-                httpStatus.getReasonPhrase(),
+                status.value(),
+                status.getReasonPhrase(),
+                message,
+                errors,
+                LocalDateTime.now()
+        );
+    }
+
+    /**
+     * Factory method for a simple error without extra data.
+     */
+    public static <T> TmsApiResponse<T> error(HttpStatus status, String message) {
+        return new TmsApiResponse<>(
+                false,
+                status.value(),
+                status.getReasonPhrase(),
                 message,
                 null,
                 LocalDateTime.now()

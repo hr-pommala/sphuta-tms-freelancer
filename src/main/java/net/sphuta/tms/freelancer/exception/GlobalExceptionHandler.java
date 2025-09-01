@@ -1,8 +1,10 @@
 package net.sphuta.tms.freelancer.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import net.sphuta.tms.freelancer.response.TmsApiResponse;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -21,108 +23,109 @@ import java.util.stream.Collectors;
  * ==========================================================
  *
  * Centralized exception handling for the TMS application.
- *
- * Purpose:
- * - Ensures consistent JSON error responses across all controllers.
- * - Wraps error details inside {@link TmsApiResponse} for uniformity.
- * - Provides clear logs for debugging and production monitoring.
- *
- * Error Handling Rules:
- * - {@link TmsException}: Custom application exception → response status from exception.
- * - {@link MethodArgumentNotValidException}: Bean validation failure → 400, with per-field messages in "data".
- * - {@link Exception}: Any unhandled exception → 500, with a generic safe message.
  */
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    // ----------------------- CUSTOM EXCEPTION HANDLER -----------------------
+    // ----------------------- CUSTOM EXCEPTION HANDLERS -----------------------
 
-    /**
-     * Handles custom {@link TmsException}.
-     *
-     * @param ex  thrown business exception
-     * @param req the current HTTP request
-     * @return ResponseEntity with {@link TmsApiResponse} (status, message, timestamp)
-     */
+    @ExceptionHandler(NotFoundException.class)
+    public ResponseEntity<TmsApiResponse<?>> notFound(NotFoundException ex) {
+        log.error("NotFoundException handled: {}", ex.getMessage());
+        return wrap(HttpStatus.NOT_FOUND, "Not Found", ex.getMessage(), null);
+    }
+
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<TmsApiResponse<?>> conflict(ConflictException ex) {
+        log.error("ConflictException handled: {}", ex.getMessage());
+        return wrap(HttpStatus.CONFLICT, "Conflict", ex.getMessage(), null);
+    }
+
     @ExceptionHandler(TmsException.class)
     public ResponseEntity<TmsApiResponse<Void>> handleTms(TmsException ex, HttpServletRequest req) {
         HttpStatus status = ex.getStatus() != null ? ex.getStatus() : HttpStatus.BAD_REQUEST;
         log.error("TmsException {} on {}: {}", status.value(), req.getRequestURI(), ex.getMessage());
 
-        // Build unified API error response
         TmsApiResponse<Void> body = new TmsApiResponse<>(
-                false,                          // success flag
-                status.value(),                 // HTTP code
-                status.getReasonPhrase(),       // HTTP reason (e.g., "Bad Request")
-                ex.getMessage(),                // developer-friendly message
-                null,                           // no additional data payload
-                LocalDateTime.now()             // current timestamp
+                false,
+                status.value(),
+                status.getReasonPhrase(),
+                ex.getMessage(),
+                null,
+                LocalDateTime.now()
         );
         return ResponseEntity.status(status).body(body);
     }
 
-    // ----------------------- VALIDATION ERROR HANDLER -----------------------
+    // ----------------------- VALIDATION HANDLERS -----------------------
 
-    /**
-     * Handles validation errors (JSR-303 annotations) when request DTOs fail constraints.
-     * Collects field-level error messages into a map and returns 400 Bad Request.
-     *
-     * @param ex  validation exception with field errors
-     * @param req current HTTP request
-     * @return ResponseEntity with error details per field inside {@link TmsApiResponse#}
-     */
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<TmsApiResponse<Map<String, String>>> handleValidation(MethodArgumentNotValidException ex,
-                                                                                HttpServletRequest req) {
+    public ResponseEntity<TmsApiResponse<Map<String, String>>> handleValidation(
+            MethodArgumentNotValidException ex, HttpServletRequest req) {
 
-        // Collect field errors into an ordered map; merge duplicate field errors into comma-separated string
         Map<String, String> details = ex.getBindingResult().getFieldErrors().stream()
                 .collect(Collectors.toMap(
                         FieldError::getField,
                         fe -> (fe.getDefaultMessage() == null || fe.getDefaultMessage().isBlank())
                                 ? "Invalid or required field"
                                 : fe.getDefaultMessage(),
-                        (a, b) -> a + ", " + b,   // merge messages if multiple errors on same field
+                        (a, b) -> a + ", " + b,
                         LinkedHashMap::new
                 ));
 
         log.warn("400 Validation failed on {}: {}", req.getRequestURI(), details);
 
-        // Wrap error in API response format
         TmsApiResponse<Map<String, String>> body = new TmsApiResponse<>(
-                false,                                      // success flag
-                HttpStatus.BAD_REQUEST.value(),             // 400
-                HttpStatus.BAD_REQUEST.getReasonPhrase(),   // "Bad Request"
+                false,
+                HttpStatus.BAD_REQUEST.value(),
+                HttpStatus.BAD_REQUEST.getReasonPhrase(),
                 "Validation failed: required/invalid fields present",
-                details,                                    // field errors under "data"
+                details,
                 LocalDateTime.now()
         );
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
-    // ----------------------- FALLBACK EXCEPTION HANDLER -----------------------
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<TmsApiResponse<?>> pathQueryValidation(ConstraintViolationException ex) {
+        log.error("ConstraintViolationException handled: {}", ex.getMessage());
+        return wrap(HttpStatus.BAD_REQUEST, "Validation failed", ex.getMessage(), null);
+    }
 
-    /**
-     * Handles any other unhandled {@link Exception}.
-     * Logs stack trace and returns 500 Internal Server Error with a safe, generic message.
-     *
-     * @param ex  uncaught exception
-     * @param req current HTTP request
-     * @return ResponseEntity with {@link TmsApiResponse} generic error body
-     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<TmsApiResponse<?>> dbConflicts(DataIntegrityViolationException ex) {
+        log.error("DataIntegrityViolationException handled: {}", ex.getMostSpecificCause().getMessage());
+        return wrap(HttpStatus.CONFLICT, "Conflict", "Unique or FK constraint violated", null);
+    }
+
+    // ----------------------- FALLBACK HANDLERS -----------------------
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<TmsApiResponse<?>> badRequest(IllegalArgumentException ex) {
+        log.error("IllegalArgumentException handled: {}", ex.getMessage());
+        return wrap(HttpStatus.BAD_REQUEST, "Bad Request", ex.getMessage(), null);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<TmsApiResponse<Void>> handleOther(Exception ex, HttpServletRequest req) {
         log.error("500 Internal error on {}: {}", req.getRequestURI(), ex.getMessage(), ex);
 
         TmsApiResponse<Void> body = new TmsApiResponse<>(
-                false,                                     // success flag
-                HttpStatus.INTERNAL_SERVER_ERROR.value(),  // 500
-                HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), // "Internal Server Error"
-                "Unexpected error",                        // keep generic for client safety
-                null,                                      // no data
+                false,
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(),
+                "Unexpected error",
+                null,
                 LocalDateTime.now()
         );
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
+    }
+
+    // ----------------------- UTILITY -----------------------
+
+    private ResponseEntity<TmsApiResponse<?>> wrap(HttpStatus status, String error, String message, Object details) {
+        var body = TmsApiResponse.failure(status, message, details);
+        return ResponseEntity.status(status).body(body);
     }
 }
