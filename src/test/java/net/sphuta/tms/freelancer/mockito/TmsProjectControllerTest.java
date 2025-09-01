@@ -46,7 +46,10 @@ class TmsProjectControllerTest {
     @Test
     @DisplayName("GET /api/v1/clients returns paged clients")
     void listClients_ok() throws Exception {
-        var c1 = new TmsClientDto(1, "Acme LLC");
+        var c1 = TmsClientDto.builder()
+            .id(1)
+            .companyName("Acme LLC")
+            .build();
         Page<TmsClientDto> page = new PageImpl<>(List.of(c1));
 
         Mockito.when(service.listClients(eq(""), eq(0), eq(100))).thenReturn(page);
@@ -175,7 +178,20 @@ class TmsProjectControllerTest {
         // Response we expect back after update
         var updated = new TmsProjectDto(
                 id,
-                new TmsClientDto(1, "Acme LLC"),
+                new TmsClientDto(1, "Acme LLC",null,              // email
+                        null,       // use displayName as companyName
+                        null, null,        // firstName, lastName
+                        null, null,        // phones
+                        null, null,        // addresses
+                        null, null,        // city, state
+                        null, null,        // postal, country
+                        null, null,        // reminders, late fees
+                        null,              // lateFeePercent
+                        null, null,        // currency, language
+                        null,              // allowInvoiceAttachments
+                        null,              // isActive
+                        null,              // createdAt
+                        null  ),
                 1,
                 "Backend API v2",
                 "ACME-BE",
@@ -224,7 +240,20 @@ class TmsProjectControllerTest {
         // Response after patch (only description changed here)
         var patched = new TmsProjectDto(
                 id,
-                new TmsClientDto(1, "Acme LLC"),
+                new TmsClientDto(1, "Acme LLC",null,              // email
+                        null,       // use displayName as companyName
+                        null, null,        // firstName, lastName
+                        null, null,        // phones
+                        null, null,        // addresses
+                        null, null,        // city, state
+                        null, null,        // postal, country
+                        null, null,        // reminders, late fees
+                        null,              // lateFeePercent
+                        null, null,        // currency, language
+                        null,              // allowInvoiceAttachments
+                        null,              // isActive
+                        null,              // createdAt
+                        null  ),
                 1,
                 "Backend API",
                 "ACME-BE",
@@ -312,7 +341,20 @@ class TmsProjectControllerTest {
      * =========================== */
 
     private TmsProjectDto sampleProjectDto(Integer id, boolean isActive) {
-        var client = new TmsClientDto(1, "Acme LLC");
+        var client =new TmsClientDto(1, "Acme LLC",null,              // email
+                null,       // use displayName as companyName
+                null, null,        // firstName, lastName
+                null, null,        // phones
+                null, null,        // addresses
+                null, null,        // city, state
+                null, null,        // postal, country
+                null, null,        // reminders, late fees
+                null,              // lateFeePercent
+                null, null,        // currency, language
+                null,              // allowInvoiceAttachments
+                null,              // isActive
+                null,              // createdAt
+                null  );
         return new TmsProjectDto(
                 id,
                 client,

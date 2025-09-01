@@ -1,48 +1,44 @@
 package net.sphuta.tms.freelancer.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import io.swagger.v3.oas.annotations.OpenAPIDefinition;
+import lombok.extern.slf4j.Slf4j;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.servers.Server;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.util.List;
 
-import lombok.extern.slf4j.Slf4j;
-
 /**
- * # TmsApiConfig
+ * ==========================================================
+ * TmsFreelancerApiConfig
+ * ==========================================================
  *
- * Central OpenAPI configuration for the **Sphuta TMS (Freelancer)** application.
- *
- * <p>This configuration supplies:</p>
- * <ul>
- *   <li>API metadata (title, version, description)</li>
- *   <li>Server list (useful for Swagger UI “Servers” dropdown)</li>
- * </ul>
- *
- * <p><strong>Notes</strong>:</p>
- * <ul>
- *   <li>No security schemes are defined here, per your requirement.</li>
- *   <li>We keep imports exactly as provided (e.g., {@code GroupedOpenApi}) to avoid modifying your file’s structure.</li>
- *   <li>Added lightweight SLF4J logs to help trace bean creation at startup.</li>
- * </ul>
+ * Central OpenAPI + ObjectMapper + CORS configuration
+ * for the **Sphuta TMS (Freelancer)** application.
  */
-@Configuration
 @Slf4j
+@Configuration
+@OpenAPIDefinition(
+        info = @io.swagger.v3.oas.annotations.info.Info( // fully qualified to avoid clash
+                title = "Sphuta TMS Freelancer API",
+                version = "v1",
+                description = "Clients, Time-Entries, Invoices, Estimates"
+        )
+)
 public class TmsFreelancerApiConfig {
 
     /**
      * Creates and exposes the primary {@link OpenAPI} bean used by springdoc to render Swagger UI.
-     *
-     * <p>Metadata is intentionally minimal and environment-agnostic. If you deploy to multiple environments,
-     * you can externalize server URL via properties and still keep this method unchanged.</p>
-     *
-     * @return a fully configured {@link OpenAPI} instance used by SpringDoc.
      */
     @Bean
     public OpenAPI baseOpenAPI() {
-
         log.info("Initializing OpenAPI bean for Sphuta TMS (Freelancer)…");
 
         Info info = new Info()
@@ -63,5 +59,33 @@ public class TmsFreelancerApiConfig {
                 servers.stream().map(Server::getUrl).toList());
 
         return openAPI;
+    }
+
+    /**
+     * Provides ObjectMapper with Java Time support.
+     */
+    @Bean
+    public ObjectMapper objectMapper(Jackson2ObjectMapperBuilder builder) {
+        log.debug("Building ObjectMapper with JavaTimeModule");
+        return builder.createXmlMapper(false)
+                .modulesToInstall(new JavaTimeModule())
+                .build();
+    }
+
+    /**
+     * Opens CORS for demo purposes.
+     * ⚠️ In production, lock this down by allowed origins/methods.
+     */
+    @Bean
+    public WebMvcConfigurer corsConfigurer() {
+        log.warn("CORS: allowing all origins for demo purposes");
+        return new WebMvcConfigurer() {
+            @Override
+            public void addCorsMappings(CorsRegistry registry) {
+                registry.addMapping("/**")
+                        .allowedOrigins("*")
+                        .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD");
+            }
+        };
     }
 }

@@ -3,6 +3,7 @@ package net.sphuta.tms.freelancer.service.impl;
 import lombok.extern.slf4j.Slf4j;
 import net.sphuta.tms.freelancer.dto.TmsClientDto;
 import net.sphuta.tms.freelancer.dto.TmsProjectDto;
+import net.sphuta.tms.freelancer.entity.ClientEntity;
 import net.sphuta.tms.freelancer.entity.ProjectEntity;
 import net.sphuta.tms.freelancer.exception.ConflictException;
 import net.sphuta.tms.freelancer.exception.NotFoundException;
@@ -11,7 +12,10 @@ import net.sphuta.tms.freelancer.repository.TmsProjectRepository;
 import net.sphuta.tms.freelancer.service.TmsProjectService;
 import net.sphuta.tms.freelancer.util.TmsProjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,32 +23,15 @@ import java.time.format.DateTimeFormatter;
 
 /**
  * Service-layer implementation for Clients & Projects use-cases.
- *
- * <p>Responsibilities:</p>
- * <ul>
- *   <li>Client listing for Owner dropdown</li>
- *   <li>Project create/update/archive/unarchive/delete</li>
- *   <li>Project listings (active, archived, active-by-owner+search)</li>
- * </ul>
- *
- * <p>Notes:</p>
- * <ul>
- *   <li>Transaction boundaries are declared at class level; read-only methods override as needed.</li>
- *   <li>Application-level uniqueness checks are performed prior to persistence to produce clean messages.
- *       Database constraints still enforce integrity.</li>
- *   <li>Added structured logging at method entry/exit and key branches, without altering behavior.</li>
- * </ul>
  */
 @Slf4j
 @Service
 @Transactional
 public class TmsProjectServiceImpl implements TmsProjectService {
 
-    /** ISO-8601 instant formatter for view-model timestamps. (kept for reference) */
     @SuppressWarnings("unused")
     private static final DateTimeFormatter ISO_INSTANT = DateTimeFormatter.ISO_INSTANT;
 
-    // ---- Dependencies (field injection per your instruction to use @Autowired) ----
     @Autowired
     private TmsClientRepository clients;
 
@@ -52,25 +39,21 @@ public class TmsProjectServiceImpl implements TmsProjectService {
     private TmsProjectRepository projects;
 
     /**
-     * List active clients with optional name search.
+     * List active clients with optional name/email/company search.
      */
     @Override
     @Transactional(readOnly = true)
     public Page<TmsClientDto> listClients(String search, int page, int size) {
         log.debug("listClients(search='{}', page={}, size={})", search, page, size);
 
-        // Pagination: sort by name ASC for stable dropdowns.
-        var pageable = PageRequest.of(page, size, Sort.by("name").ascending());
+        Pageable pageable = PageRequest.of(page, size, Sort.by("companyName").ascending());
 
-        // Conditional search vs full active list.
-        var p = (search != null && !search.isBlank())
-                ? clients.findByActiveTrueAndNameContainingIgnoreCase(search, pageable)
-                : clients.findByActiveTrue(pageable);
+        Page<ClientEntity> p = clients.search(search, pageable);
 
-        // Map entity -> dto (only id + name for slim dropdown projection).
         var result = p.map(TmsProjectMapper::toClientDto);
 
-        log.info("listClients -> totalElements={}, totalPages={}, page={}", result.getTotalElements(), result.getTotalPages(), result.getNumber());
+        log.info("listClients -> totalElements={}, totalPages={}, page={}",
+                result.getTotalElements(), result.getTotalPages(), result.getNumber());
         return result;
     }
 
@@ -82,11 +65,9 @@ public class TmsProjectServiceImpl implements TmsProjectService {
         log.debug("createProject requested: name='{}', code='{}', clientId='{}'",
                 in.projectName(), in.code(), in.clientId());
 
-        // FK must exist.
         var client = clients.findById(in.clientId())
                 .orElseThrow(() -> new NotFoundException("Client not found"));
 
-        // Uniqueness (app-level check; DB also enforces).
         if (projects.existsByClientEntity_IdAndNameIgnoreCase(client.getId(), in.projectName())) {
             log.warn("createProject conflict: (clientId, projectName) already exists");
             throw new ConflictException("Project already exists for this client (clientId, projectName)");
@@ -98,8 +79,7 @@ public class TmsProjectServiceImpl implements TmsProjectService {
             throw new ConflictException("Duplicate code for this client");
         }
 
-        // Build entity from DTO.
-        var entity = ProjectEntity.builder()
+        ProjectEntity entity = ProjectEntity.builder()
                 .clientEntity(client)
                 .name(in.projectName())
                 .code(in.code())
@@ -110,29 +90,24 @@ public class TmsProjectServiceImpl implements TmsProjectService {
                 .active(Boolean.TRUE.equals(in.isActive()))
                 .build();
 
-        // Persist and map to dto.
-        var saved = projects.save(entity);
+        ProjectEntity saved = projects.save(entity);
         log.info("Created project id={} name={} client={}", saved.getId(), saved.getName(), client.getId());
         return TmsProjectMapper.toProjectDto(saved);
     }
 
     /**
-     * Update a project. Supports both PUT (fullReplace=true) and PATCH (fullReplace=false).
+     * Update a project. Supports both PUT and PATCH.
      */
     @Override
     public TmsProjectDto updateProject(int id, TmsProjectDto in, boolean fullReplace) {
         log.debug("updateProject(id={}, fullReplace={})", id, fullReplace);
 
-        // Load target project
-        var project = projects.findById(id)
+        ProjectEntity project = projects.findById(id)
                 .orElseThrow(() -> new NotFoundException("Project not found"));
 
-        // --- PUT (full replace) ---
         if (fullReplace) {
-            project.setClientEntity(
-                    clients.findById(in.clientId())
-                            .orElseThrow(() -> new NotFoundException("Client not found"))
-            );
+            project.setClientEntity(clients.findById(in.clientId())
+                    .orElseThrow(() -> new NotFoundException("Client not found")));
             project.setName(in.projectName());
             project.setCode(in.code());
             project.setHourlyRate(in.hourlyRate());
@@ -140,13 +115,10 @@ public class TmsProjectServiceImpl implements TmsProjectService {
             project.setEndDate(in.endDate());
             project.setDescription(in.description());
             project.setActive(Boolean.TRUE.equals(in.isActive()));
-        }
-        // --- PATCH (partial update) ---
-        else {
+        } else {
             if (in.clientId() != null) {
-                var client = clients.findById(in.clientId())
-                        .orElseThrow(() -> new NotFoundException("Client not found"));
-                project.setClientEntity(client);
+                project.setClientEntity(clients.findById(in.clientId())
+                        .orElseThrow(() -> new NotFoundException("Client not found")));
             }
             if (in.projectName() != null) project.setName(in.projectName());
             if (in.code() != null) project.setCode(in.code());
@@ -157,29 +129,26 @@ public class TmsProjectServiceImpl implements TmsProjectService {
             if (in.isActive() != null) project.setActive(in.isActive());
         }
 
-        // Save changes
-        var saved = projects.save(project);
-
+        ProjectEntity saved = projects.save(project);
         log.info("Project {} updated: id={}", fullReplace ? "fully" : "partially", saved.getId());
         return TmsProjectMapper.toProjectDto(saved);
     }
 
-
     /**
-     * Archive or unarchive a project (toggle active flag).
+     * Archive or unarchive a project.
      */
     @Override
     public TmsProjectDto archiveProject(int id, boolean unarchive) {
         log.debug("archiveProject(id={}, unarchive={})", id, unarchive);
 
-        var p = projects.findById(id).orElseThrow(() -> new NotFoundException("Project not found"));
-        if (unarchive && p.isActive())
-            throw new ConflictException("Project already active");
-        if (!unarchive && !p.isActive())
-            throw new ConflictException("Project already archived");
+        ProjectEntity p = projects.findById(id)
+                .orElseThrow(() -> new NotFoundException("Project not found"));
+
+        if (unarchive && p.isActive()) throw new ConflictException("Project already active");
+        if (!unarchive && !p.isActive()) throw new ConflictException("Project already archived");
 
         p.setActive(unarchive);
-        var saved = projects.save(p);
+        ProjectEntity saved = projects.save(p);
         log.info("{} project id={}", unarchive ? "Unarchived" : "Archived", id);
         return TmsProjectMapper.toProjectDto(saved);
     }
@@ -191,7 +160,7 @@ public class TmsProjectServiceImpl implements TmsProjectService {
     public void deleteProject(int id) {
         log.debug("deleteProject(id={}) requested", id);
 
-        var project = projects.findById(id)
+        ProjectEntity project = projects.findById(id)
                 .orElseThrow(() -> new NotFoundException("Project not found"));
 
         projects.delete(project);
@@ -199,7 +168,7 @@ public class TmsProjectServiceImpl implements TmsProjectService {
     }
 
     /**
-     * List projects with filters (active, archived, client, search).
+     * List projects with filters.
      */
     @Override
     @Transactional(readOnly = true)
@@ -210,40 +179,23 @@ public class TmsProjectServiceImpl implements TmsProjectService {
         Pageable pageable = PageRequest.of(page, size, Sort.by("name").ascending());
 
         Page<ProjectEntity> p;
-
         if (clientId != null && search != null && !search.isBlank()) {
-            // filter by active, client, search
-            p = projects.findByActiveAndClientEntity_IdAndNameContainingIgnoreCaseOrCodeContainingIgnoreCaseOrDescriptionContainingIgnoreCase(
-                    active, clientId, search, search, search, pageable);
+            p = projects.searchByActiveAndClientAndTerm(active, clientId, search, pageable);
         } else if (clientId != null) {
-            // filter by active + client
             p = projects.findByActiveAndClientEntity_Id(active, clientId, pageable);
         } else if (search != null && !search.isBlank()) {
-            // filter by active + search
-            p = projects.findByActiveAndNameContainingIgnoreCaseOrCodeContainingIgnoreCaseOrDescriptionContainingIgnoreCase(
-                    active, search, search, search, pageable);
+            p = projects.searchByActiveAndTerm(active, search, pageable);
         } else {
-            // only active flag
             p = projects.findByActive(active, pageable);
         }
 
         var result = p.map(TmsProjectMapper::toProjectDto);
-
         log.info("listProjects -> totalElements={}, totalPages={}, page={}",
                 result.getTotalElements(), result.getTotalPages(), result.getNumber());
-
         return result;
     }
 
-
-
     /* ------------ helpers ------------ */
-
-    /**
-     * Parses a single "prop,dir" sort token into a {@link Sort.Order}.
-     * <p>Note: retained for compatibility; not used by current list endpoints.</p>
-     */
-    @SuppressWarnings("unused")
     private Sort.Order parseSort(String s) {
         var parts = s.split(",", 2);
         var prop = parts[0];
@@ -251,6 +203,7 @@ public class TmsProjectServiceImpl implements TmsProjectService {
         return "desc".equals(dir) ? Sort.Order.desc(prop) : Sort.Order.asc(prop);
     }
 
-    /** Null-coalescing helper; returns {@code a} if non-null, else {@code b}. */
-    private static <T> T coalesce(T a, T b) { return a != null ? a : b; }
+    private static <T> T coalesce(T a, T b) {
+        return a != null ? a : b;
+    }
 }

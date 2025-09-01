@@ -30,7 +30,7 @@ import java.net.URI;
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/v1")
+@RequestMapping("/api/v1/projects")
 @Validated
 public class TmsProjectController {
 
