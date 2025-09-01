@@ -1,93 +1,108 @@
 package net.sphuta.tms.freelancer.exception;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 /**
- * Application-specific exceptions used to map to HTTP responses.
- * <p>
- * Each nested static class represents a particular category of exception
- * (e.g., NotFound, Conflict, Validation, Forbidden, Unauthorized).
- * These exceptions are thrown within the service/controller layers and
- * handled globally by {@link GlobalExceptionHandler}.
+ * Centralized custom API exceptions for the TMS application.
+ *
+ * <p>This class groups all common exceptions used across the system,
+ * ensuring consistent error handling and logging behavior.
+ *
+ * Each exception type extends {@link RuntimeException} so that they
+ * can propagate unchecked and be handled globally (e.g., by a
+ * {@code @ControllerAdvice}).
+ *
+ * <p>Lombok's {@link Slf4j} annotation provides a logger instance
+ * named 'log' for logging exception messages when they are created.
  */
+@Slf4j
 public class ApiExceptions {
-
-    /** Logger instance for capturing exception creation logs. */
-    private static final Logger log = LoggerFactory.getLogger(ApiExceptions.class);
 
     /**
      * Exception thrown when a requested resource is not found.
+     *
+     * <p>Example: A timesheet with a given ID does not exist.
      */
     public static class NotFoundException extends RuntimeException {
         /**
-         * Constructor accepting a message.
-         * @param m the error message
+         * Constructor with message.
+         *
+         * @param m Error message describing what was not found
          */
         public NotFoundException(String m) {
-            super(m);
-            // Log at error level when this exception is constructed
-            log.error("NotFoundException created with message: {}", m);
+            super(m); // Call parent RuntimeException constructor
+            log.error("NotFound: {}", m); // Log error with message
         }
     }
 
     /**
-     * Exception thrown when a conflict occurs (e.g., duplicate resource, invalid state).
+     * Exception thrown when there is a conflict with the current state.
+     *
+     * <p>Example: Attempting to create a timesheet that overlaps
+     * with an existing one for the same project.
      */
     public static class ConflictException extends RuntimeException {
         /**
-         * Constructor accepting a message.
-         * @param m the error message
+         * Constructor with message.
+         *
+         * @param m Error message describing the conflict
          */
         public ConflictException(String m) {
-            super(m);
-            // Log at error level when this exception is constructed
-            log.error("ConflictException created with message: {}", m);
+            super(m); // Call parent RuntimeException constructor
+            log.error("Conflict: {}", m); // Log error with message
         }
     }
 
     /**
-     * Exception thrown when validation fails (e.g., invalid input).
+     * Exception thrown when validation of request data fails.
+     *
+     * <p>Example: Invalid dates or negative hours submitted in a request.
      */
     public static class ValidationException extends RuntimeException {
         /**
-         * Constructor accepting a message.
-         * @param m the error message
+         * Constructor with message.
+         *
+         * @param m Error message describing the validation failure
          */
         public ValidationException(String m) {
-            super(m);
-            // Log at error level when this exception is constructed
-            log.error("ValidationException created with message: {}", m);
+            super(m); // Call parent RuntimeException constructor
+            log.error("Validation: {}", m); // Log error with message
         }
     }
 
     /**
-     * Exception thrown when access is forbidden (user lacks privileges).
+     * Exception thrown when a user tries to access a resource
+     * they do not have permission to access.
+     *
+     * <p>Example: Trying to approve a timesheet without manager role.
      */
     public static class ForbiddenException extends RuntimeException {
         /**
-         * Constructor accepting a message.
-         * @param m the error message
+         * Constructor with message.
+         *
+         * @param m Error message describing the forbidden access
          */
         public ForbiddenException(String m) {
-            super(m);
-            // Log at error level when this exception is constructed
-            log.error("ForbiddenException created with message: {}", m);
+            super(m); // Call parent RuntimeException constructor
+            log.error("Forbidden: {}", m); // Log error with message
         }
     }
 
     /**
-     * Exception thrown when authentication fails (invalid/missing credentials).
+     * Exception thrown when authentication fails or
+     * user credentials are invalid/missing.
+     *
+     * <p>Example: Accessing an API endpoint without a valid JWT token.
      */
     public static class UnauthorizedException extends RuntimeException {
         /**
-         * Constructor accepting a message.
-         * @param m the error message
+         * Constructor with message.
+         *
+         * @param m Error message describing the unauthorized access
          */
         public UnauthorizedException(String m) {
-            super(m);
-            // Log at error level when this exception is constructed
-            log.error("UnauthorizedException created with message: {}", m);
+            super(m); // Call parent RuntimeException constructor
+            log.error("Unauthorized: {}", m); // Log error with message
         }
     }
 }

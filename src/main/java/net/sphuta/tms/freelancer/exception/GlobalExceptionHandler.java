@@ -1,8 +1,7 @@
 package net.sphuta.tms.freelancer.exception;
 
-import net.sphuta.tms.freelancer.response.ApiResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
+import net.sphuta.tms.freelancer.response.TmsApiResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -15,100 +14,97 @@ import java.util.Map;
 
 /**
  * GlobalExceptionHandler
- * -----------------------
- * Centralized exception handler for the entire application.
- * Converts application-specific and framework exceptions into
- * standardized HTTP responses with {@link ApiResponse}.
+ *
+ * <p>This class provides a centralized exception handling mechanism for the application.
+ * It catches exceptions thrown across controllers and returns structured {@link TmsApiResponse}
+ * objects with proper HTTP status codes and messages.
+ *
+ * <p>It uses Spring's {@link ControllerAdvice} and {@link ExceptionHandler} to map specific
+ * exceptions to corresponding response formats.
  */
+@Slf4j
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
-    /** Logger instance for capturing exception details. */
-    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
-
     /**
-     * Handles validation errors thrown when method arguments fail @Valid checks.
+     * Handles validation errors triggered by {@link MethodArgumentNotValidException}.
+     * <p>Extracts all field errors and returns them in a structured map response.
      *
-     * @param ex the validation exception
-     * @return ResponseEntity with status 400 and validation errors
+     * @param ex the validation exception containing field-level errors
+     * @return ResponseEntity with {@link TmsApiResponse} containing validation error messages
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<?> handleValidation(MethodArgumentNotValidException ex) {
-        // Collect validation errors from binding result
+    public ResponseEntity<TmsApiResponse<Map<String, String>>> handleValidation(MethodArgumentNotValidException ex) {
+        // Collect field errors into a map: fieldName -> errorMessage
         Map<String, String> errors = new HashMap<>();
         for (FieldError fe : ex.getBindingResult().getFieldErrors()) {
             errors.put(fe.getField(), fe.getDefaultMessage());
         }
-        // Log warning and error for diagnostics
         log.warn("Validation failed: {}", errors);
-        log.error("ValidationException encountered", ex);
-        // Build and return a bad request response
-        return ResponseEntity.badRequest().body(ApiResponse.fail("Validation failed: " + errors));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(TmsApiResponse.validationError(errors));
     }
 
     /**
-     * Handles resource not found exceptions.
+     * Handles {@link ApiExceptions.NotFoundException}.
+     * <p>Used when a requested resource cannot be found.
      *
-     * @param ex NotFoundException
-     * @return ResponseEntity with 404 status and error message
+     * @param ex the custom NotFoundException
+     * @return ResponseEntity with {@link TmsApiResponse} and HTTP 404 status
      */
     @ExceptionHandler(ApiExceptions.NotFoundException.class)
-    public ResponseEntity<?> handleNotFound(ApiExceptions.NotFoundException ex) {
-        // Log error before returning
-        log.error("NotFoundException encountered", ex);
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.fail(ex.getMessage()));
+    public ResponseEntity<TmsApiResponse<Object>> handleNotFound(ApiExceptions.NotFoundException ex) {
+        log.error("Not found: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(TmsApiResponse.error(HttpStatus.NOT_FOUND, ex.getMessage()));
     }
 
     /**
-     * Handles conflict exceptions (e.g., duplicate resources).
+     * Handles {@link ApiExceptions.ConflictException}.
+     * <p>Used when a request causes a conflict, e.g., duplicate resource.
      *
-     * @param ex ConflictException
-     * @return ResponseEntity with 409 status and error message
+     * @param ex the custom ConflictException
+     * @return ResponseEntity with {@link TmsApiResponse} and HTTP 409 status
      */
     @ExceptionHandler(ApiExceptions.ConflictException.class)
-    public ResponseEntity<?> handleConflict(ApiExceptions.ConflictException ex) {
-        // Log error before returning
-        log.error("ConflictException encountered", ex);
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.fail(ex.getMessage()));
+    public ResponseEntity<TmsApiResponse<Object>> handleConflict(ApiExceptions.ConflictException ex) {
+        log.error("Conflict: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(TmsApiResponse.error(HttpStatus.CONFLICT, ex.getMessage()));
     }
 
     /**
-     * Handles forbidden access exceptions.
+     * Handles {@link ApiExceptions.ForbiddenException}.
+     * <p>Used when access is denied to a resource.
      *
-     * @param ex ForbiddenException
-     * @return ResponseEntity with 403 status and error message
+     * @param ex the custom ForbiddenException
+     * @return ResponseEntity with {@link TmsApiResponse} and HTTP 403 status
      */
     @ExceptionHandler(ApiExceptions.ForbiddenException.class)
-    public ResponseEntity<?> handleForbidden(ApiExceptions.ForbiddenException ex) {
-        // Log error before returning
-        log.error("ForbiddenException encountered", ex);
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.fail(ex.getMessage()));
+    public ResponseEntity<TmsApiResponse<Object>> handleForbidden(ApiExceptions.ForbiddenException ex) {
+        log.error("Forbidden: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(TmsApiResponse.error(HttpStatus.FORBIDDEN, ex.getMessage()));
     }
 
     /**
-     * Handles unauthorized access exceptions.
+     * Handles {@link ApiExceptions.UnauthorizedException}.
+     * <p>Used when authentication fails or user is not authorized.
      *
-     * @param ex UnauthorizedException
-     * @return ResponseEntity with 401 status and error message
+     * @param ex the custom UnauthorizedException
+     * @return ResponseEntity with {@link TmsApiResponse} and HTTP 401 status
      */
     @ExceptionHandler(ApiExceptions.UnauthorizedException.class)
-    public ResponseEntity<?> handleUnauthorized(ApiExceptions.UnauthorizedException ex) {
-        // Log error before returning
-        log.error("UnauthorizedException encountered", ex);
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.fail(ex.getMessage()));
+    public ResponseEntity<TmsApiResponse<Object>> handleUnauthorized(ApiExceptions.UnauthorizedException ex) {
+        log.error("Unauthorized: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(TmsApiResponse.error(HttpStatus.UNAUTHORIZED, ex.getMessage()));
     }
 
     /**
-     * Handles all other uncaught exceptions.
+     * Handles any other unexpected exceptions not explicitly mapped.
      *
-     * @param ex generic Exception
-     * @return ResponseEntity with 500 status and generic error message
+     * @param ex the unexpected exception
+     * @return ResponseEntity with {@link TmsApiResponse} and HTTP 500 status
      */
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<?> handleOther(Exception ex) {
-        // Log unexpected error with stack trace
-        log.error("Unexpected error", ex);
-        // Build and return an internal server error response
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.fail("Internal Server Error"));
+    public ResponseEntity<TmsApiResponse<Object>> handleOther(Exception ex) {
+        log.error("Unexpected error: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(TmsApiResponse.error(HttpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error"));
     }
 }

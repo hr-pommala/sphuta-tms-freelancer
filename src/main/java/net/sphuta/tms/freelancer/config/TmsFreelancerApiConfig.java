@@ -4,8 +4,7 @@ import io.swagger.v3.oas.models.ExternalDocumentation;
 import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.OpenAPI;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory; // element-level: SLF4J logging API
+import lombok.extern.slf4j.Slf4j; // ✅ Lombok annotation to inject SLF4J logger
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -27,11 +26,9 @@ import org.springframework.context.annotation.Configuration;
  *    configured title/version to aid diagnostics without changing behavior.
  * ----------------------------------------------------------------------------
  */
+@Slf4j // ✅ Lombok will auto-generate a static final Logger named "log"
 @Configuration
-public class TimesheetApiConfig {
-
-    /** Logger for this configuration (does not change functionality). */
-    private static final Logger log = LoggerFactory.getLogger(TimesheetApiConfig.class);
+public class TmsFreelancerApiConfig {
 
     /**
      * Creates and registers the OpenAPI bean used by springdoc to render
@@ -50,7 +47,7 @@ public class TimesheetApiConfig {
             log.info("Initializing OpenAPI bean for Swagger UI");
         }
 
-        // block-level: construct OpenAPI info with contact details
+        // construct OpenAPI info with contact details
         Info info = new Info()
                 .title(apiTitle)
                 .version(apiVersion)
@@ -59,7 +56,7 @@ public class TimesheetApiConfig {
                         .name("Sphuta")
                         .email("support@sphuta.net"));
 
-        // block-level: optional external documentation reference
+        // optional external documentation reference
         ExternalDocumentation externalDocs = new ExternalDocumentation()
                 .description("Docs")
                 .url("https://example.com/docs");

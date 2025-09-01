@@ -10,7 +10,7 @@ import java.util.List;
  *
  * @param <T> the type of elements contained in the content list
  */
-public record PageResponse<T>(
+public record TmsPageResponse<T>(
 
         /**
          * The list of items returned in this page.

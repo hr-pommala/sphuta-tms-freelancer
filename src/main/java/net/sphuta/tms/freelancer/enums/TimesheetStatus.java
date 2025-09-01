@@ -1,4 +1,4 @@
-package net.sphuta.tms.freelancer.enam;
+package net.sphuta.tms.freelancer.enums;
 
 
 /** Status enum with a Java 17 switch expression for mutability. */
