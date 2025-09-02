@@ -3,33 +3,52 @@ package net.sphuta.tms.freelancer.repository;
 import net.sphuta.tms.freelancer.entity.TimeEntryEntity;
 import net.sphuta.tms.freelancer.entity.TimesheetEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
 /**
- * Repository interface for managing {@link TimeEntryEntity}.
+ * ==========================================================
+ * TmsTimeEntryRepository
+ * ==========================================================
  *
- * <p>This interface extends {@link JpaRepository} to inherit
- * CRUD operations for time entry entities and defines custom
- * query methods for retrieving entries by timesheet, date, and description.</p>
+ * Spring Data JPA repository for {@link TimeEntryEntity}.
  *
- * <p>It acts as the Data Access Layer, separating persistence logic
- * from business logic.</p>
+ * Responsibilities:
+ * - Provides CRUD operations for time entries via {@link JpaRepository}.
+ * - Declares custom queries for business-specific use cases.
+ *
+ * Typical usage:
+ * - Fetching uninvoiced, approved time entries for invoice generation.
+ * - Checking whether a client has related time entries before deletion.
  */
 public interface TmsTimeEntryRepository extends JpaRepository<TimeEntryEntity, Integer> {
 
     /**
-     * Retrieves a list of time entries associated with the given timesheet.
+     * Finds all approved and uninvoiced time entries for a client within a given date range.
      *
-     * @param timesheet the timesheet entity used as a filter
-     * @return list of {@link TimeEntryEntity} belonging to the specified timesheet
+     * Purpose:
+     * - Used to generate invoices (only APPROVED entries not yet linked to an invoice).
+     *
+     * @param clientId the ID of the client
+     * @param from     start date (inclusive)
+     * @param to       end date (inclusive)
+     * @return list of matching uninvoiced time entries
      */
     List<TimeEntryEntity> findByTimesheet(TimesheetEntity timesheet);
+    @Query("""
+           select t from TimeEntryEntity t
+            where t.clientId = :clientId
+              and t.status = 'APPROVED'
+              and t.invoiceId is null
+              and t.entryDate between :from and :to
+           """)
+    List<TimeEntryEntity> findUninvoiced(Integer clientId, LocalDate from, LocalDate to);
 
     /**
-     * Retrieves a time entry by timesheet, entry date, and description.
+     * Checks whether the given client has at least one time entry.
      *
      * <p>This ensures uniqueness of a time entry within a timesheet by date and description.</p>
      *
@@ -37,6 +56,9 @@ public interface TmsTimeEntryRepository extends JpaRepository<TimeEntryEntity, I
      * @param d the entry date
      * @param desc the description of the time entry
      * @return an {@link Optional} containing the matching time entry if found, or empty if not
+     * @param clientId the client ID to check
+     * @return true if at least one time entry exists for the client; false otherwise
      */
     Optional<TimeEntryEntity> findByTimesheetAndEntryDateAndDescription(TimesheetEntity t, LocalDate d, String desc);
+    boolean existsByClientId(Integer clientId);
 }

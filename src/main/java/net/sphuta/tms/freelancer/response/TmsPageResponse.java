@@ -3,15 +3,28 @@ package net.sphuta.tms.freelancer.response;
 import java.util.List;
 
 /**
- * Generic wrapper for paginated API responses.
- * <p>
- * This record carries a list of items (content) and paging metadata (page).
- * </p>
+ * Generic paginated response wrapper.
  *
- * @param <T> the type of elements contained in the content list
+ * <p>Encapsulates a page of results and associated pagination metadata.
+ * Used as the {@code data} portion of {@link TmsApiResponse} when returning
+ * lists of resources such as projects or clients.</p>
+ *
+ * <p>Structure:</p>
+ * <pre>
+ * {
+ *   "content": [ ... ],
+ *   "page": {
+ *     "number": 0,
+ *     "size": 25,
+ *     "totalElements": 100,
+ *     "totalPages": 4
+ *   }
+ * }
+ * </pre>
+ *
+ * @param <T> the type of elements contained in the page
  */
 public record TmsPageResponse<T>(
-
         /**
          * The list of items returned in this page.
          * Example: list of timesheets, projects, etc.
@@ -34,7 +47,6 @@ public record TmsPageResponse<T>(
      * </p>
      */
     public record PageMeta(
-
             /** The current page index (zero-based). */
             int number,
 
