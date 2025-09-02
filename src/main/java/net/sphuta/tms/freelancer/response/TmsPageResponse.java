@@ -24,15 +24,39 @@ import java.util.List;
  *
  * @param <T> the type of elements contained in the page
  */
-public record TmsPageResponse<T>(List<T> content, PageMeta page) {
+public record TmsPageResponse<T>(
+        /**
+         * The list of items returned in this page.
+         * Example: list of timesheets, projects, etc.
+         */
+        List<T> content,
+
+        /**
+         * The metadata object describing pagination details
+         * such as page number, size, total elements, and total pages.
+         */
+        PageMeta page
+) {
 
     /**
-     * Metadata for a page of results.
-     *
-     * @param number        current page number (0-based)
-     * @param size          the size of the page (number of elements per page)
-     * @param totalElements total number of elements across all pages
-     * @param totalPages    total number of pages available
+     * Metadata about the current page.
+     * <p>
+     * This inner record describes the current page number,
+     * how many elements per page, total elements available,
+     * and total number of pages.
+     * </p>
      */
-    public record PageMeta(int number, int size, long totalElements, int totalPages) { }
+    public record PageMeta(
+            /** The current page index (zero-based). */
+            int number,
+
+            /** The number of elements requested per page. */
+            int size,
+
+            /** The total number of elements available across all pages. */
+            long totalElements,
+
+            /** The total number of pages available. */
+            int totalPages
+    ) {}
 }

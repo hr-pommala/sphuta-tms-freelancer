@@ -1,11 +1,13 @@
 package net.sphuta.tms.freelancer.repository;
 
 import net.sphuta.tms.freelancer.entity.TimeEntryEntity;
+import net.sphuta.tms.freelancer.entity.TimesheetEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * ==========================================================
@@ -35,6 +37,7 @@ public interface TmsTimeEntryRepository extends JpaRepository<TimeEntryEntity, I
      * @param to       end date (inclusive)
      * @return list of matching uninvoiced time entries
      */
+    List<TimeEntryEntity> findByTimesheet(TimesheetEntity timesheet);
     @Query("""
            select t from TimeEntryEntity t
             where t.clientId = :clientId
@@ -47,11 +50,15 @@ public interface TmsTimeEntryRepository extends JpaRepository<TimeEntryEntity, I
     /**
      * Checks whether the given client has at least one time entry.
      *
-     * Purpose:
-     * - Used as a safeguard before deleting a client to ensure data integrity.
+     * <p>This ensures uniqueness of a time entry within a timesheet by date and description.</p>
      *
+     * @param t the timesheet entity
+     * @param d the entry date
+     * @param desc the description of the time entry
+     * @return an {@link Optional} containing the matching time entry if found, or empty if not
      * @param clientId the client ID to check
      * @return true if at least one time entry exists for the client; false otherwise
      */
+    Optional<TimeEntryEntity> findByTimesheetAndEntryDateAndDescription(TimesheetEntity t, LocalDate d, String desc);
     boolean existsByClientId(Integer clientId);
 }

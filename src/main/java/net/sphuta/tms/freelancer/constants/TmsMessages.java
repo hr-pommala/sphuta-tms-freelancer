@@ -1,19 +1,35 @@
 package net.sphuta.tms.freelancer.constants;
 
 /**
- * Centralized constants for messages, log templates, and paths.
- * Instead of spreading across multiple constants files,
- * everything is kept in one place for easy maintenance.
+ * TmsMessages
+ * ------------------------------------------------------
+ * This utility class holds all the constant application-wide
+ * success messages used across the TMS Freelancer module.
+ *
+ * <p>Purpose:
+ * - Centralize message definitions to avoid duplication
+ * - Ensure consistent wording across controllers and services
+ * - Improve maintainability by keeping all messages in one place
+ *
+ * <p>Usage:
+ * These constants are typically used in API responses to
+ * communicate success messages back to the client.
+ *
+ * <p>Note:
+ * The class is declared final and has a private constructor
+ * to prevent instantiation and inheritance.
  */
 public final class TmsMessages {
 
-    private TmsMessages() {
-        // Prevent instantiation
-    }
 
     // ===================== TimeEntryController =====================
     public static final String TIME_ENTRY_BASE_PATH = "/api/v1/time-entries";
     public static final String TIME_ENTRY_UNINVOICED_PATH = "/uninvoiced";
+    /**
+     * Private constructor to prevent instantiation.
+     * This ensures that the class is only used as a static utility.
+     */
+    private TmsMessages() {}
 
     public static final String LOG_TIME_ENTRY_FETCH_REQUEST =
             "HTTP GET /time-entries/uninvoiced clientId={}, from={}, to={}";
@@ -23,10 +39,16 @@ public final class TmsMessages {
             "Uninvoiced entries fetched for client {} ({} ms, count={})";
     public static final String LOG_TIME_ENTRY_FETCH_SUCCESS_NO_COUNT =
             "Uninvoiced entries fetched for client {} ({} ms)";
+    /** Message displayed when all timesheets are successfully fetched */
+    public static final String TIMESHEETS_FETCHED = "Timesheets fetched successfully";
 
+    /** Message displayed when a timesheet is successfully created */
+    public static final String TIMESHEET_CREATED = "Timesheet created successfully";
     // ===================== ClientController =====================
     public static final String CLIENT_BASE_PATH = "/api/v1/clients";
 
+    /** Message displayed when a single timesheet is successfully fetched */
+    public static final String TIMESHEET_FETCHED = "Timesheet fetched successfully";
     // Success messages
     public static final String MSG_CLIENTS_FETCHED = "Clients fetched";
     public static final String MSG_CLIENT_FETCHED = "Client fetched";
@@ -39,6 +61,8 @@ public final class TmsMessages {
 
     // Error messages
     public static final String ERR_CLIENT_NOT_FOUND = "Client not found";
+    /** Message displayed after bulk insert or update operation is completed */
+    public static final String BULK_UPSERT_COMPLETED = "Bulk upsert completed";
 
     // Log templates
     public static final String LOG_CLIENT_LIST_REQUEST =
@@ -53,16 +77,24 @@ public final class TmsMessages {
     public static final String LOG_CLIENT_UNARCHIVE_REQUEST = "HTTP POST /clients/{}/unarchive";
     public static final String LOG_CLIENT_EXPORT_REQUEST =
             "HTTP GET /clients/export active='{}', search='{}'";
+    /** Message displayed when a timesheet is successfully submitted */
+    public static final String TIMESHEET_SUBMITTED = "Timesheet submitted successfully";
 
+    /** Message displayed when a timesheet is successfully locked */
+    public static final String TIMESHEET_LOCKED = "Timesheet locked successfully";
     // ===================== EstimateController =====================
     public static final String ESTIMATE_BASE_PATH = "/api/v1/estimates";
 
+    /** Message displayed when a time entry is successfully created */
+    public static final String TIME_ENTRY_CREATED = "Time entry created successfully";
     public static final String LOG_ESTIMATE_CREATE_REQUEST = "HTTP POST /estimates for client {}";
     public static final String LOG_ESTIMATE_NO_ITEMS_WARN = "Estimate create request has no items for client {}";
     public static final String LOG_ESTIMATE_ITEMS_TRACE = "Estimate create request contains {} item(s)";
     public static final String LOG_ESTIMATE_CREATED_SUCCESS =
             "Estimate {} created for client {} ({} ms)";
 
+    /** Message displayed when a time entry is successfully deleted */
+    public static final String TIME_ENTRY_DELETED = "Time entry deleted successfully";
     // ===================== InvoiceController =====================
     public static final String INVOICE_BASE_PATH = "/api/v1/invoices";
     public static final String INVOICE_SEND_PATH = "/{invoiceId}/send";

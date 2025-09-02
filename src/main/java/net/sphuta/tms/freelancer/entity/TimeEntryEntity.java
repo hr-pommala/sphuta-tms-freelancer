@@ -9,27 +9,15 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.OffsetTime;
+import java.util.List;
 
-/**
- * ==========================================================
- * TmsTimeEntryEntity
- * ==========================================================
- *
- * JPA Entity representing the `time_entries` table.
- *
- * Purpose:
- * - Stores logged hours of work for a given client and date.
- * - Supports workflow status (PENDING, APPROVED, REJECTED).
- * - May optionally be linked to an invoice (via {@code invoiceId}).
- *
- * Notes:
- * - AUTO_INCREMENT primary key (id).
- * - Indexed by {@code client_id}, {@code invoice_id}, and {@code entry_date}
- *   for optimized search/filtering.
- * - Lifecycle events log persistence operations for traceability.
- */
+@Slf4j
 @Getter
 @Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
 @Table(
         name = "time_entries",
@@ -39,89 +27,114 @@ import java.time.OffsetDateTime;
                 @Index(name = "idx_te_date", columnList = "entry_date")
         }
 )
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-@Slf4j
 public class TimeEntryEntity {
 
-    /** Primary key (AUTO_INCREMENT). */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id; // was UUID
+    private Integer id;
 
-    /** Foreign key reference to the client. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "timesheet_id", nullable = false)
+    private TimesheetEntity timesheet;
+
     @Column(name = "client_id", nullable = false)
-    private Integer clientId; // was UUID
+    private Integer clientId;
 
-    /** Date when the work was performed. */
     @Column(name = "entry_date", nullable = false)
     private LocalDate entryDate;
 
-    /** Number of hours worked (supports decimals, e.g., 3.50). */
+    private String description;
+
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal hours;
 
-    /** Workflow status (PENDING, APPROVED, REJECTED). */
+    @Column(name = "start_time")
+    private OffsetTime startTime;
+
+    @Column(name = "end_time")
+    private OffsetTime endTime;
+
     @Enumerated(EnumType.STRING)
     @Column(length = 20, nullable = false)
     private Status status;
 
-    /** Optional reference to an invoice (nullable). */
-    @Column(name = "invoice_id")
-    private Integer invoiceId; // was UUID (nullable)
+    @Column(name = "rate_at_entry", precision = 10, scale = 2)
+    private BigDecimal rateAtEntry;
 
-    /** Timestamp when the entry was created (system-managed). */
+    @Column(name = "invoice_id")
+    private Integer invoiceId;
+
+    @Column(name = "cost_at_entry", precision = 12, scale = 2)
+    private BigDecimal costAtEntry;
+
     @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
-    /** Timestamp when the entry was last updated (system-managed). */
     @UpdateTimestamp
-    @Column(name = "updated_at")
+    @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
     // ----------------------------
-    // Entity Lifecycle Callbacks
+    // Lifecycle Callbacks
     // ----------------------------
 
-    /** Fires before inserting a new record. */
     @PrePersist
     private void beforePersist() {
-        log.info("About to persist new TimeEntry for clientId={}, entryDate={}, hours={}",
-                clientId, entryDate, hours);
+        log.info("About to persist new TimeEntry for clientId={}, entryDate={}, hours={}", clientId, entryDate, hours);
+        if (log.isDebugEnabled()) {
+            log.debug("PrePersist TimeEntry: id={}, timesheetId={}, entryDate={}, hours={}, rateAtEntry={}, startTime={}, endTime={}",
+                    id,
+                    timesheet != null ? timesheet.getId() : null,
+                    entryDate,
+                    hours,
+                    rateAtEntry,
+                    startTime,
+                    endTime
+            );
+        }
     }
 
-    /** Fires after inserting a new record. */
     @PostPersist
     private void afterPersist() {
         log.info("Persisted TimeEntry with id={} and status={}", id, status);
+        if (log.isInfoEnabled()) {
+            log.info("PostPersist TimeEntry: id={}, timesheetId={}, entryDate={}, hours={}, costAtEntry={}",
+                    id,
+                    timesheet != null ? timesheet.getId() : null,
+                    entryDate,
+                    hours,
+                    costAtEntry
+            );
+        }
     }
 
-    /** Fires before updating a record. */
     @PreUpdate
     private void beforeUpdate() {
         log.info("About to update TimeEntry id={}, currentStatus={}, invoiceId={}", id, status, invoiceId);
+        if (log.isDebugEnabled()) {
+            log.debug("PreUpdate TimeEntry: id={}, entryDate={}, hours={}, rateAtEntry={}, startTime={}, endTime={}",
+                    id, entryDate, hours, rateAtEntry, startTime, endTime);
+        }
     }
 
-    /** Fires after updating a record. */
     @PostUpdate
     private void afterUpdate() {
         log.info("Updated TimeEntry id={} at {}, newStatus={}, invoiceId={}", id, updatedAt, status, invoiceId);
     }
 
-    /** Fires when an entity is loaded from the database. */
     @PostLoad
     private void afterLoad() {
-        log.debug("Loaded TimeEntry id={} for clientId={} with status={} and hours={}",
-                id, clientId, status, hours);
+        log.debug("Loaded TimeEntry id={} for clientId={} with status={} and hours={}", id, clientId, status, hours);
+        if (log.isTraceEnabled()) {
+            log.trace("PostLoad TimeEntry: id={}, entryDate={}, hours={}", id, entryDate, hours);
+        }
     }
 
-    /**
-     * Workflow status for time entries.
-     * - PENDING  → Entry awaiting approval.
-     * - APPROVED → Entry validated and can be invoiced.
-     * - REJECTED → Entry denied and excluded from invoicing.
-     */
-    public enum Status { PENDING, APPROVED, REJECTED }
+    // ----------------------------
+    // Enum for Workflow Status
+    // ----------------------------
+    public enum Status {
+        PENDING, APPROVED, REJECTED
+    }
 }

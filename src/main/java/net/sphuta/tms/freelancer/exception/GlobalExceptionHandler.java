@@ -1,7 +1,5 @@
 package net.sphuta.tms.freelancer.exception;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import net.sphuta.tms.freelancer.response.TmsApiResponse;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -9,23 +7,22 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import jakarta.validation.ConstraintViolationException;
+import jakarta.servlet.http.HttpServletRequest;
+
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-/**
- * ==========================================================
- * GlobalExceptionHandler
- * ==========================================================
- *
- * Centralized exception handling for the TMS application.
- */
 @Slf4j
 @RestControllerAdvice
+@ControllerAdvice
 public class GlobalExceptionHandler {
 
     // ----------------------- CUSTOM EXCEPTION HANDLERS -----------------------
@@ -33,13 +30,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(NotFoundException.class)
     public ResponseEntity<TmsApiResponse<?>> notFound(NotFoundException ex) {
         log.error("NotFoundException handled: {}", ex.getMessage());
-        return wrap(HttpStatus.NOT_FOUND, "Not Found", ex.getMessage(), null);
+        return wrap(HttpStatus.NOT_FOUND, ex.getMessage(), null);
     }
 
     @ExceptionHandler(ConflictException.class)
     public ResponseEntity<TmsApiResponse<?>> conflict(ConflictException ex) {
         log.error("ConflictException handled: {}", ex.getMessage());
-        return wrap(HttpStatus.CONFLICT, "Conflict", ex.getMessage(), null);
+        return wrap(HttpStatus.CONFLICT, ex.getMessage(), null);
     }
 
     @ExceptionHandler(TmsException.class)
@@ -90,21 +87,19 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<TmsApiResponse<?>> pathQueryValidation(ConstraintViolationException ex) {
         log.error("ConstraintViolationException handled: {}", ex.getMessage());
-        return wrap(HttpStatus.BAD_REQUEST, "Validation failed", ex.getMessage(), null);
+        return wrap(HttpStatus.BAD_REQUEST, "Validation failed: " + ex.getMessage(), null);
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<TmsApiResponse<?>> dbConflicts(DataIntegrityViolationException ex) {
         log.error("DataIntegrityViolationException handled: {}", ex.getMostSpecificCause().getMessage());
-        return wrap(HttpStatus.CONFLICT, "Conflict", "Unique or FK constraint violated", null);
+        return wrap(HttpStatus.CONFLICT, "Unique or FK constraint violated", null);
     }
-
-    // ----------------------- FALLBACK HANDLERS -----------------------
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<TmsApiResponse<?>> badRequest(IllegalArgumentException ex) {
         log.error("IllegalArgumentException handled: {}", ex.getMessage());
-        return wrap(HttpStatus.BAD_REQUEST, "Bad Request", ex.getMessage(), null);
+        return wrap(HttpStatus.BAD_REQUEST, ex.getMessage(), null);
     }
 
     @ExceptionHandler(Exception.class)
@@ -123,8 +118,7 @@ public class GlobalExceptionHandler {
     }
 
     // ----------------------- UTILITY -----------------------
-
-    private ResponseEntity<TmsApiResponse<?>> wrap(HttpStatus status, String error, String message, Object details) {
+    private ResponseEntity<TmsApiResponse<?>> wrap(HttpStatus status, String message, Object details) {
         var body = TmsApiResponse.failure(status, message, details);
         return ResponseEntity.status(status).body(body);
     }
