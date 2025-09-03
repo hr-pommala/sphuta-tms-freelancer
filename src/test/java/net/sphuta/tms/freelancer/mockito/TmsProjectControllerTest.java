@@ -54,7 +54,7 @@ class TmsProjectControllerTest {
 
         Mockito.when(service.listClients(eq(""), eq(0), eq(100))).thenReturn(page);
 
-        mvc.perform(get("/api/v1/clients")
+        mvc.perform(get("/api/v1/projects/clients")
                         .queryParam("active", "true")
                         .queryParam("search", "")
                         .queryParam("page", "0")
@@ -65,7 +65,7 @@ class TmsProjectControllerTest {
                 .andExpect(jsonPath("$.message").value(ApiMessageConstants.CLIENTS_FETCHED))
                 .andExpect(jsonPath("$.data.content", hasSize(1)))
                 .andExpect(jsonPath("$.data.content[0].id").value(1))
-                .andExpect(jsonPath("$.data.content[0].name").value("Acme LLC"))
+                .andExpect(jsonPath("$.data.content[0].companyName").value("Acme LLC"))
                 .andExpect(jsonPath("$.data.page.number").value(0))
                 .andExpect(jsonPath("$.timestamp", not(emptyString())));
     }
@@ -83,7 +83,7 @@ class TmsProjectControllerTest {
         Mockito.when(service.listProjects(eq(true), isNull(), eq(""), eq(0), eq(25)))
                 .thenReturn(page);
 
-        mvc.perform(get("/api/v1/projects")
+        mvc.perform(get("/api/v1/projects/projects")
                         .queryParam("active", "true")
                         .queryParam("search", "")
                         .queryParam("page", "0")
@@ -106,7 +106,7 @@ class TmsProjectControllerTest {
         Mockito.when(service.listProjects(eq(false), isNull(), eq(""), eq(0), eq(25)))
                 .thenReturn(page);
 
-        mvc.perform(get("/api/v1/projects")
+        mvc.perform(get("/api/v1/projects/projects")
                         .queryParam("active", "false")
                         .queryParam("search", "")
                         .queryParam("page", "0")
@@ -125,7 +125,7 @@ class TmsProjectControllerTest {
         Mockito.when(service.listProjects(eq(true), eq(5), eq("backend"), eq(0), eq(25)))
                 .thenReturn(page);
 
-        mvc.perform(get("/api/v1/projects")
+        mvc.perform(get("/api/v1/projects/projects")
                         .queryParam("active", "true")
                         .queryParam("clientId", "5")
                         .queryParam("search", "backend")
@@ -158,7 +158,7 @@ class TmsProjectControllerTest {
 
         Mockito.when(service.createProject(Mockito.any(TmsProjectDto.class))).thenReturn(created);
 
-        mvc.perform(post("/api/v1/projects")
+        mvc.perform(post("/api/v1/projects/projects")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(om.writeValueAsString(requestBody)))
                 .andExpect(status().isCreated())
@@ -223,7 +223,7 @@ class TmsProjectControllerTest {
         Mockito.when(service.updateProject(eq(id), Mockito.any(TmsProjectDto.class), eq(true)))
                 .thenReturn(updated);
 
-        mvc.perform(put("/api/v1/projects/{id}", id)
+        mvc.perform(put("/api/v1/projects/projects/{id}", id)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(om.writeValueAsString(body)))
                 .andExpect(status().isOk())
@@ -282,7 +282,7 @@ class TmsProjectControllerTest {
         Mockito.when(service.updateProject(eq(id), Mockito.any(TmsProjectDto.class), eq(false)))
                 .thenReturn(patched);
 
-        mvc.perform(patch("/api/v1/projects/{id}", id)
+        mvc.perform(patch("/api/v1/projects/projects/{id}", id)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(om.writeValueAsString(patchBody)))
                 .andExpect(status().isOk())
@@ -299,7 +299,7 @@ class TmsProjectControllerTest {
 
         Mockito.when(service.archiveProject(eq(id), eq(false))).thenReturn(archived);
 
-        mvc.perform(post("/api/v1/projects/{id}/archive", id))
+        mvc.perform(post("/api/v1/projects/projects/{id}/archive", id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value(ApiMessageConstants.PROJECT_ARCHIVED))
@@ -314,7 +314,7 @@ class TmsProjectControllerTest {
 
         Mockito.when(service.archiveProject(eq(id), eq(true))).thenReturn(active);
 
-        mvc.perform(post("/api/v1/projects/{id}/unarchive", id))
+        mvc.perform(post("/api/v1/projects/projects/{id}/unarchive", id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value(ApiMessageConstants.PROJECT_UNARCHIVED))
@@ -327,7 +327,7 @@ class TmsProjectControllerTest {
         int id = 403;
         Mockito.doNothing().when(service).deleteProject(id);
 
-        mvc.perform(delete("/api/v1/projects/{id}", id))
+        mvc.perform(delete("/api/v1/projects/projects/{id}", id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value(ApiMessageConstants.PROJECT_DELETED))

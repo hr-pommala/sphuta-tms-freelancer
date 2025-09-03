@@ -38,7 +38,13 @@ public final class TmsProjectMapper {
                 : ((e.getFirstName() != null ? e.getFirstName() : "")
                 + (e.getLastName() != null ? " " + e.getLastName() : "")).trim();
 
-        return TmsClientDto.slim(e.getId(), displayName);
+        // Use builder to create slim DTO with only id and display name
+        return TmsClientDto.builder()
+                .id(e.getId())
+                .companyName((e.getCompanyName() != null && !e.getCompanyName().isBlank()) ? e.getCompanyName() : null)
+                .firstName((e.getCompanyName() == null || e.getCompanyName().isBlank()) ? e.getFirstName() : null)
+                .lastName((e.getCompanyName() == null || e.getCompanyName().isBlank()) ? e.getLastName() : null)
+                .build();
     }
 
     /* ---------- Project: Entity → DTO ---------- */

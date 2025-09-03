@@ -1,6 +1,8 @@
 package net.sphuta.tms.freelancer.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonProperty.Access;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
 import lombok.Builder;
@@ -15,8 +17,6 @@ public record TmsClientDto(
         @Schema(description = "Client ID (auto-incremented)", example = "101", accessMode = Schema.AccessMode.READ_ONLY)
         Integer id,
 
-        String name,
-
         @Email
         @NotBlank(message = "email is required")
         @Schema(description = "Primary billing email", example = "billing@acme.com")
@@ -27,11 +27,13 @@ public record TmsClientDto(
         String companyName,
 
         @Size(max = 200)
-        @Schema(description = "Contact first name", example = "John")
+        @JsonProperty(access = Access.WRITE_ONLY)
+        @Schema(description = "Contact first name", example = "Swathi", accessMode = Schema.AccessMode.WRITE_ONLY)
         String firstName,
 
         @Size(max = 200)
-        @Schema(description = "Contact last name", example = "Doe")
+        @JsonProperty(access = Access.WRITE_ONLY)
+        @Schema(description = "Contact last name", example = "Medisetti", accessMode = Schema.AccessMode.WRITE_ONLY)
         String lastName,
 
         @Pattern(regexp = "^[+]?([0-9 ()-]{6,20})$", message = "mobilePhone must be E.164-like")
@@ -96,48 +98,9 @@ public record TmsClientDto(
         OffsetDateTime createdAt,
 
         @Schema(description = "Record last updated timestamp", example = "2025-08-29T15:22:10Z", accessMode = Schema.AccessMode.READ_ONLY)
-        OffsetDateTime updatedAt
-) {
+        OffsetDateTime updatedAt,
 
-    @AssertTrue(message = "Provide either companyName or both firstName and lastName")
-    @Schema(hidden = true)
-    public boolean identityOk() {
-        boolean company = companyName != null && !companyName.isBlank();
-        boolean person = (firstName != null && !firstName.isBlank())
-                && (lastName != null && !lastName.isBlank());
-        return company || person;
-    }
+        @Schema(description = "Full display name", example = "Swathi Medisetti", accessMode = Schema.AccessMode.READ_ONLY)
+        String name
+) {}
 
-    @AssertTrue(message = "lateFeePercent must be > 0 when chargeLateFees=true")
-    @Schema(hidden = true)
-    public boolean lateFeeOk() {
-        return !Boolean.TRUE.equals(chargeLateFees) || (lateFeePercent != null && lateFeePercent > 0);
-    }
-
-    /**
-     * Slim factory method for dropdowns and lightweight mappings.
-     * Creates a minimal DTO with only id + companyName filled.
-     */
-    public static TmsClientDto slim(Integer id, String name) {
-        return new TmsClientDto(
-                id,
-                name,
-                null,              // email
-                null,       // use displayName as companyName
-                null, null,        // firstName, lastName
-                null, null,        // phones
-                null, null,        // addresses
-                null, null,        // city, state
-                null, null,        // postal, country
-                null, null,        // reminders, late fees
-                null,              // lateFeePercent
-                null, null,        // currency, language
-                null,              // allowInvoiceAttachments
-                null,              // isActive
-                null,              // createdAt
-                null               // updatedAt
-        );
-    }
-
-
-}

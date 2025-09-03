@@ -1,32 +1,15 @@
 package net.sphuta.tms.freelancer.entity;
 
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.Table;
-
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.List;
 
-/**
- * ==========================================================
- * ClientEntity
- * ==========================================================
- *
- * Represents a client in the Freelancer TMS system.
- * Stores both company and individual client details.
- */
 @Getter
 @Setter
 @Builder
@@ -40,7 +23,7 @@ public class ClientEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    /** Display name (derived or provided). Used for listings and sorting. */
+    /** Display name (auto-generated from firstName + lastName). */
     @Column(nullable = false, length = 255)
     private String name;
 
@@ -102,15 +85,40 @@ public class ClientEntity {
     private Boolean isActive;
 
     @Column(nullable = false, updatable = false)
-    private OffsetDateTime createdAt;
+    private Instant createdAt;
 
     @Column(nullable = false)
-    private OffsetDateTime updatedAt;
+    private Instant updatedAt;
 
-    /**
-     * Relationship to projects owned by this client.
-     * (Assuming you have a ProjectEntity with a `clientEntity` field.)
-     */
     @OneToMany(mappedBy = "clientEntity", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private List<ProjectEntity> projects;
+
+    // ---------------- lifecycle hooks ----------------
+    @PrePersist
+    protected void onCreate() {
+        Instant now = Instant.now();
+        this.createdAt = now;
+        this.updatedAt = now;
+        generateDisplayName();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = Instant.now();
+        generateDisplayName();
+    }
+
+    // ---------------- helper method ----------------
+    private void generateDisplayName() {
+        if ((firstName != null && !firstName.isBlank()) ||
+                (lastName != null && !lastName.isBlank())) {
+
+            String f = (firstName != null) ? firstName.trim() : "";
+            String l = (lastName != null) ? lastName.trim() : "";
+            this.name = (f + " " + l).trim();
+
+        } else {
+            this.name = null; // no first/last name
+        }
+    }
 }

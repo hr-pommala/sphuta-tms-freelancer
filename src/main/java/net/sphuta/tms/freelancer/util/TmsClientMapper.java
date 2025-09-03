@@ -3,55 +3,23 @@ package net.sphuta.tms.freelancer.util;
 import net.sphuta.tms.freelancer.dto.TmsClientDto;
 import net.sphuta.tms.freelancer.entity.ClientEntity;
 
-/**
- * ==========================================================
- * TmsClientMapper
- * ==========================================================
- *
- * Utility class for converting between:
- * - {@link TmsClientDto} (incoming API payloads),
- * - {@link ClientEntity} (JPA persistence model),
- * - {@link TmsClientDto} (outgoing API response).
- *
- * Responsibilities:
- * - Ensure consistent mapping between DTOs and entities.
- * - Apply sensible defaults for new entities.
- * - Support partial updates by merging only non-null fields.
- *
- * Design notes:
- * - Pure utility methods (static).
- * - No logging inside mapper (responsibility of services).
- */
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+
 public class TmsClientMapper {
 
-    /**
-     * Builds a **new entity** from a request payload.
-     * - Applies defaults for booleans and active status.
-     *
-     * @param r request DTO
-     * @return new entity ready to be persisted
-     */
     public static ClientEntity toNewEntity(TmsClientDto r) {
         ClientEntity e = new ClientEntity();
         applyCommonFields(r, e);
 
-        // Apply defaults and flags
         e.setSendReminders(Boolean.TRUE.equals(r.sendReminders()));
         e.setChargeLateFees(Boolean.TRUE.equals(r.chargeLateFees()));
         e.setAllowInvoiceAttachments(Boolean.TRUE.equals(r.allowInvoiceAttachments()));
-        e.setIsActive(r.isActive() == null || r.isActive()); // default to active
+        e.setIsActive(r.isActive() == null || r.isActive());
 
         return e;
     }
 
-    /**
-     * Merges a request into an **existing entity**.
-     * - Only non-null request fields overwrite entity fields.
-     * - Useful for PATCH/PUT operations.
-     *
-     * @param r request DTO
-     * @param e existing entity to update
-     */
     public static void updateEntity(TmsClientDto r, ClientEntity e) {
         applyCommonFields(r, e);
 
@@ -61,20 +29,13 @@ public class TmsClientMapper {
         if (r.isActive() != null) e.setIsActive(r.isActive());
     }
 
-    /**
-     * Converts a **persistence entity** into a response DTO.
-     * - Used to return API results to clients.
-     *
-     * @param e entity from DB
-     * @return API response DTO
-     */
     public static TmsClientDto toResponse(ClientEntity e) {
         return TmsClientDto.builder()
                 .id(e.getId())
+                .email(e.getEmail())
                 .companyName(e.getCompanyName())
                 .firstName(e.getFirstName())
                 .lastName(e.getLastName())
-                .email(e.getEmail())
                 .mobilePhone(e.getMobilePhone())
                 .businessPhone(e.getBusinessPhone())
                 .addressLine1(e.getAddressLine1())
@@ -90,17 +51,13 @@ public class TmsClientMapper {
                 .language(e.getLanguage())
                 .allowInvoiceAttachments(e.getAllowInvoiceAttachments())
                 .isActive(e.getIsActive())
-                .createdAt(e.getCreatedAt())
-                .updatedAt(e.getUpdatedAt())
+                .createdAt(e.getCreatedAt() != null ? OffsetDateTime.ofInstant(e.getCreatedAt(), ZoneOffset.UTC) : null)
+                .updatedAt(e.getUpdatedAt() != null ? OffsetDateTime.ofInstant(e.getUpdatedAt(), ZoneOffset.UTC) : null)
+                .name(e.getName()) // ✅ comes from entity lifecycle
                 .build();
     }
 
-    // ----------------- helper methods -----------------
-
-    /**
-     * Common field setter for both new + updated entities.
-     * - Only non-null fields from request overwrite entity values.
-     */
+    // ----------------- helper -----------------
     private static void applyCommonFields(TmsClientDto r, ClientEntity e) {
         if (r.companyName()   != null) e.setCompanyName(r.companyName());
         if (r.firstName()     != null) e.setFirstName(r.firstName());
@@ -117,5 +74,7 @@ public class TmsClientMapper {
         if (r.lateFeePercent()!= null) e.setLateFeePercent(r.lateFeePercent());
         if (r.currencyCode()  != null) e.setCurrencyCode(r.currencyCode());
         if (r.language()      != null) e.setLanguage(r.language());
+
+
     }
 }
