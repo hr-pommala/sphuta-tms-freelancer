@@ -27,29 +27,46 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
- * Web layer tests for {@link TmsProjectController}.
+ * Unit test class for {@link TmsProjectController}.
  *
- * <p>Loads MVC only; service is mocked.</p>
+ * <p>
+ * Uses {@link WebMvcTest} to load only the web layer (controller and related configs).
+ * Service layer is mocked using {@link MockBean}.
+ * </p>
+ *
+ * <p>
+ * This ensures tests verify only controller-level request/response mappings,
+ * JSON serialization, status codes, and headers without touching database or service logic.
+ * </p>
  */
 @WebMvcTest(controllers = TmsProjectController.class)
 class TmsProjectControllerTest {
 
+    /** MockMvc simulates HTTP requests and validates controller responses */
     @Autowired private MockMvc mvc;
+
+    /** ObjectMapper for serializing/deserializing request/response bodies */
     @Autowired private ObjectMapper om;
 
+    /** Mocked service layer to isolate controller tests */
     @MockBean private TmsProjectService service;
 
-    /* ===========================
-     *         CLIENTS
-     * =========================== */
+    /* =====================================================
+     *                CLIENT ENDPOINT TESTS
+     * ===================================================== */
 
+    /**
+     * Test: GET /api/v1/projects/clients
+     * Scenario: Should return paginated clients list.
+     * Validates JSON structure, message, and pagination fields.
+     */
     @Test
     @DisplayName("GET /api/v1/clients returns paged clients")
     void listClients_ok() throws Exception {
         var c1 = TmsClientDto.builder()
-            .id(1)
-            .companyName("Acme LLC")
-            .build();
+                .id(1)
+                .companyName("Acme LLC")
+                .build();
         Page<TmsClientDto> page = new PageImpl<>(List.of(c1));
 
         Mockito.when(service.listClients(eq(""), eq(0), eq(100))).thenReturn(page);
@@ -70,10 +87,14 @@ class TmsProjectControllerTest {
                 .andExpect(jsonPath("$.timestamp", not(emptyString())));
     }
 
-    /* ===========================
-     *         PROJECTS
-     * =========================== */
+    /* =====================================================
+     *               PROJECT ENDPOINT TESTS
+     * ===================================================== */
 
+    /**
+     * Test: GET /api/v1/projects/projects
+     * Scenario: Fetch active projects.
+     */
     @Test
     @DisplayName("GET /api/v1/projects (active=true) returns active projects")
     void listProjects_active_ok() throws Exception {
@@ -97,6 +118,10 @@ class TmsProjectControllerTest {
                 .andExpect(jsonPath("$.data.content[0].isActive").value(true));
     }
 
+    /**
+     * Test: GET /api/v1/projects/projects
+     * Scenario: Fetch archived (inactive) projects.
+     */
     @Test
     @DisplayName("GET /api/v1/projects (active=false) returns archived projects")
     void listProjects_archived_ok() throws Exception {
@@ -116,6 +141,10 @@ class TmsProjectControllerTest {
                 .andExpect(jsonPath("$.data.content[0].isActive").value(false));
     }
 
+    /**
+     * Test: GET /api/v1/projects/projects
+     * Scenario: Apply filters clientId + search.
+     */
     @Test
     @DisplayName("GET /api/v1/projects with clientId + search filters correctly")
     void listProjects_filter_ok() throws Exception {
@@ -136,6 +165,10 @@ class TmsProjectControllerTest {
                 .andExpect(jsonPath("$.data.content[0].projectName").value("Backend API"));
     }
 
+    /**
+     * Test: POST /api/v1/projects/projects
+     * Scenario: Creates a new project and returns Location header + created object.
+     */
     @Test
     @DisplayName("POST /api/v1/projects creates and returns project + Location")
     void create_ok() throws Exception {
@@ -170,28 +203,22 @@ class TmsProjectControllerTest {
                 .andExpect(jsonPath("$.data.projectName").value("Backend API"));
     }
 
+    /**
+     * Test: PUT /api/v1/projects/{id}
+     * Scenario: Fully updates project (replacement).
+     */
     @Test
     @DisplayName("PUT /api/v1/projects/{id} fully updates a project")
     void put_ok() throws Exception {
         int id = 301;
 
-        // Response we expect back after update
+        // Expected response after update
         var updated = new TmsProjectDto(
                 id,
-                new TmsClientDto(1, "Acme LLC",null,              // email
-                        null,       // use displayName as companyName
-                        null, null,        // firstName, lastName
-                        null, null,        // phones
-                        null, null,        // addresses
-                        null, null,        // city, state
-                        null, null,        // postal, country
-                        null, null,        // reminders, late fees
-                        null,              // lateFeePercent
-                        null, null,        // currency, language
-                        null,              // allowInvoiceAttachments
-                        null,              // isActive
-                        null,              // createdAt
-                        null  ),
+                new TmsClientDto(1, "Acme LLC",null, null, null, null,
+                        null, null, null, null, null, null,
+                        null, null, null, null, null, null,
+                        null, null, null, null, null),
                 1,
                 "Backend API v2",
                 "ACME-BE",
@@ -204,10 +231,10 @@ class TmsProjectControllerTest {
                 "2025-08-25T18:20:00Z"
         );
 
-        // Full replacement request body
+        // Full request body
         var body = new TmsProjectDto(
                 id,
-                null, // client in request not needed
+                null, // client ignored in request
                 1,
                 "Backend API v2",
                 "ACME-BE",
@@ -232,28 +259,22 @@ class TmsProjectControllerTest {
                 .andExpect(jsonPath("$.data.projectName").value("Backend API v2"));
     }
 
+    /**
+     * Test: PATCH /api/v1/projects/{id}
+     * Scenario: Partially updates project (e.g., description only).
+     */
     @Test
     @DisplayName("PATCH /api/v1/projects/{id} partially updates a project")
     void patch_ok() throws Exception {
         int id = 302;
 
-        // Response after patch (only description changed here)
+        // Expected response after patch
         var patched = new TmsProjectDto(
                 id,
-                new TmsClientDto(1, "Acme LLC",null,              // email
-                        null,       // use displayName as companyName
-                        null, null,        // firstName, lastName
-                        null, null,        // phones
-                        null, null,        // addresses
-                        null, null,        // city, state
-                        null, null,        // postal, country
-                        null, null,        // reminders, late fees
-                        null,              // lateFeePercent
-                        null, null,        // currency, language
-                        null,              // allowInvoiceAttachments
-                        null,              // isActive
-                        null,              // createdAt
-                        null  ),
+                new TmsClientDto(1, "Acme LLC",null, null, null, null,
+                        null, null, null, null, null, null,
+                        null, null, null, null, null, null,
+                        null, null, null, null, null),
                 1,
                 "Backend API",
                 "ACME-BE",
@@ -266,17 +287,14 @@ class TmsProjectControllerTest {
                 "2025-08-25T18:20:00Z"
         );
 
-        // Partial request (just description)
+        // Partial request body
         var patchBody = new TmsProjectDto(
-                null, null, null, // id/client/clientId unchanged
-                null, // projectName
-                null, // code
-                null, // hourlyRate
-                null, // startDate
-                null, // endDate
+                null, null, null,
+                null, null, null,
+                null, null,
                 "Phase 2",
-                null, // isActive
-                null, null // createdAt/updatedAt ignored on request
+                null,
+                null, null
         );
 
         Mockito.when(service.updateProject(eq(id), Mockito.any(TmsProjectDto.class), eq(false)))
@@ -291,6 +309,10 @@ class TmsProjectControllerTest {
                 .andExpect(jsonPath("$.data.description").value("Phase 2"));
     }
 
+    /**
+     * Test: POST /api/v1/projects/{id}/archive
+     * Scenario: Marks project as inactive.
+     */
     @Test
     @DisplayName("POST /api/v1/projects/{id}/archive marks project inactive")
     void archive_ok() throws Exception {
@@ -306,6 +328,10 @@ class TmsProjectControllerTest {
                 .andExpect(jsonPath("$.data.isActive").value(false));
     }
 
+    /**
+     * Test: POST /api/v1/projects/{id}/unarchive
+     * Scenario: Marks project as active.
+     */
     @Test
     @DisplayName("POST /api/v1/projects/{id}/unarchive marks project active")
     void unarchive_ok() throws Exception {
@@ -321,6 +347,10 @@ class TmsProjectControllerTest {
                 .andExpect(jsonPath("$.data.isActive").value(true));
     }
 
+    /**
+     * Test: DELETE /api/v1/projects/{id}
+     * Scenario: Deletes a project successfully.
+     */
     @Test
     @DisplayName("DELETE /api/v1/projects/{id} returns success envelope")
     void delete_ok() throws Exception {
@@ -336,25 +366,22 @@ class TmsProjectControllerTest {
         Mockito.verify(service).deleteProject(id);
     }
 
-    /* ===========================
-     *        HELPERS
-     * =========================== */
+    /* =====================================================
+     *                  HELPER METHODS
+     * ===================================================== */
 
+    /**
+     * Helper method to build sample {@link TmsProjectDto} with dummy data.
+     *
+     * @param id       project ID
+     * @param isActive active status
+     * @return sample DTO instance
+     */
     private TmsProjectDto sampleProjectDto(Integer id, boolean isActive) {
-        var client =new TmsClientDto(1, "Acme LLC",null,              // email
-                null,       // use displayName as companyName
-                null, null,        // firstName, lastName
-                null, null,        // phones
-                null, null,        // addresses
-                null, null,        // city, state
-                null, null,        // postal, country
-                null, null,        // reminders, late fees
-                null,              // lateFeePercent
-                null, null,        // currency, language
-                null,              // allowInvoiceAttachments
-                null,              // isActive
-                null,              // createdAt
-                null  );
+        var client = new TmsClientDto(1, "Acme LLC",null, null, null, null,
+                null, null, null, null, null, null,
+                null, null, null, null, null, null,
+                null, null, null, null, null);
         return new TmsProjectDto(
                 id,
                 client,

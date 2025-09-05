@@ -28,16 +28,23 @@ import java.time.Instant;
 import java.time.LocalDate;
 
 /**
- * JPA entity representing a Project.
+ * Entity class that maps to the {@code projects} table.
+ * <p>
+ * Represents a project belonging to a client. Each project has metadata such as
+ * hourly rate, date range, description, and audit timestamps.
+ * Constraints ensure project uniqueness per client.
  */
 @Entity
 @Table(
         name = "projects",
         uniqueConstraints = {
+                // Ensures that a client cannot have multiple projects with the same name.
                 @UniqueConstraint(name = "uq_project_per_client", columnNames = {"client_id", "name"})
         },
         indexes = {
+                // Index for faster lookups by client ID.
                 @Index(name = "ix_projects_client", columnList = "client_id"),
+                // Index for faster search by project name.
                 @Index(name = "ix_projects_name", columnList = "name")
         }
 )
@@ -48,49 +55,95 @@ import java.time.LocalDate;
 @ToString
 public class ProjectEntity {
 
+    /**
+     * Primary key of the project.
+     * Auto-generated using identity strategy.
+     */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
 
+    /**
+     * The client to which this project belongs.
+     * Defined as a mandatory {@link ManyToOne} relationship.
+     * Fetched lazily to avoid unnecessary loading.
+     */
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "client_id", nullable = false)
     private ClientEntity clientEntity;
 
+    /**
+     * Project name (required).
+     * Limited to 255 characters.
+     */
     @Column(name = "name", nullable = false, length = 255)
     private String name;
 
+    /**
+     * Optional project code for unique identification.
+     * Limited to 100 characters.
+     */
     @Column(name = "code", length = 100)
     private String code;
 
+    /**
+     * Hourly billing rate for the project.
+     * Precision ensures up to 10 digits with 2 decimals.
+     * Cannot be null.
+     */
     @Column(name = "hourly_rate", nullable = false, precision = 10, scale = 2)
     private BigDecimal hourlyRate;
 
+    /**
+     * The project start date.
+     * Nullable if project start is not defined.
+     */
     @Column(name = "start_date")
     private LocalDate startDate;
 
+    /**
+     * The project end date.
+     * Nullable if the project is ongoing.
+     */
     @Column(name = "end_date")
     private LocalDate endDate;
 
+    /**
+     * Detailed project description.
+     * Stored as {@code TEXT} in database to allow longer content.
+     */
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
     /**
-     * Active/archived flag.
-     *
-     * With @Builder.Default to ensure the default applies when using the builder.
+     * Flag indicating if the project is active or archived.
+     * <p>
+     * Defaults to {@code true} when using {@link Builder}.
      */
     @Builder.Default
     @Column(name = "is_active", nullable = false)
     private boolean active = true;
 
+    /**
+     * Timestamp marking when the record was first created.
+     * Automatically populated by Hibernate.
+     */
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
+    /**
+     * Timestamp marking the last time the record was updated.
+     * Automatically managed by Hibernate.
+     */
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    /**
+     * Version field used for optimistic locking.
+     * Helps prevent concurrent update conflicts.
+     */
     @Version
     private long version;
 }
