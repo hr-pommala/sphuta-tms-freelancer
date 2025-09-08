@@ -102,6 +102,12 @@ public class TmsProjectServiceImpl implements TmsProjectService {
         var client = clients.findById(in.clientId())
                 .orElseThrow(() -> new NotFoundException("Client not found"));
 
+        // Date validation (only one rule: endDate must not be before startDate)
+        if (in.startDate() != null && in.endDate() != null
+                && in.endDate().isBefore(in.startDate())) {
+            throw new ConflictException("End date cannot be before start date");
+        }
+
         // Enforce uniqueness of project name per client
         if (projects.existsByClientEntity_IdAndNameIgnoreCase(client.getId(), in.projectName())) {
             log.warn("createProject conflict: (clientId, projectName) already exists");
@@ -174,6 +180,14 @@ public class TmsProjectServiceImpl implements TmsProjectService {
             if (in.endDate() != null) project.setEndDate(in.endDate());
             if (in.description() != null) project.setDescription(in.description());
             if (in.isActive() != null) project.setActive(in.isActive());
+        }
+
+
+        // Date validation (same rule as create): endDate must not be before startDate
+        if (project.getStartDate() != null && project.getEndDate() != null
+                && project.getEndDate().isBefore(project.getStartDate())) {
+            log.warn("updateProject conflict: endDate is before startDate for project id={}", id);
+            throw new ConflictException("End date cannot be before start date");
         }
 
         // Persist updated project
