@@ -71,7 +71,7 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
         // NEW: verify project exists (throw if not)
         if (req.projectId() == null || !projectRepository.existsById(req.projectId())) {
             log.error("Project not found: projectId={}", req.projectId());
-            throw new ApiExceptions.NotFoundException("Project not found");
+            throw new NotFoundException("Project not found");
         }
 
         // Check for duplicate timesheet

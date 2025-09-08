@@ -7,49 +7,17 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.util.List;
-import java.util.Optional;
-
 /**
- * ===========================================================
- * TmsClientRepository
- * ===========================================================
- *
- * <p>Repository interface for performing persistence and search operations
- * on {@link ClientEntity} objects.</p>
- *
- * <p><b>Features:</b></p>
- * - Extends {@link JpaRepository} → inherits CRUD operations and pagination. <br>
- * - Adds custom JPQL queries for flexible client search (by active status, name, or email). <br>
- * - Provides both <i>filtered</i> and <i>unfiltered</i> search methods. <br>
- *
- * <p><b>Spring Data JPA benefits:</b></p>
- * - No need to write boilerplate DAO code. <br>
- * - Supports pagination and sorting via {@link Pageable}. <br>
- * - Query methods can be derived from method names or explicitly annotated with {@link Query}. <br>
+ * Repository interface for {@link ClientEntity} entities.
  */
 public interface TmsClientRepository extends JpaRepository<ClientEntity, Integer> {
 
-    // ------------------------------------------------------------------------
-    // CUSTOM SEARCH METHODS
-    // ------------------------------------------------------------------------
-
     /**
-     * Full-text style search across multiple client attributes.
+     * Full-text style search across companyName, firstName, lastName, and email.
      *
-     * <p>Filters on:</p>
-     * - {@code companyName} <br>
-     * - {@code firstName} <br>
-     * - {@code lastName} <br>
-     * - {@code email} <br>
-     *
-     * <p>Notes:</p>
-     * - Ignores filter if {@code q} is null or blank. <br>
-     * - Only returns active clients. <br>
-     *
-     * @param q        free-text search term (nullable/blank → no filter applied)
-     * @param pageable pagination and sorting configuration
-     * @return a {@link Page} of matching {@link ClientEntity} objects
+     * @param q        free-text term (nullable/blank for no filter)
+     * @param pageable paging and sorting information
+     * @return a page of matching clients
      */
     @Query("""
         select c
@@ -66,60 +34,14 @@ public interface TmsClientRepository extends JpaRepository<ClientEntity, Integer
     Page<ClientEntity> search(@Param("q") String q, Pageable pageable);
 
     /**
-     * Finds all clients that are marked as active.
-     *
-     * @param pageable pagination and sorting configuration
-     * @return a {@link Page} of active {@link ClientEntity} objects
+     * Finds all active clients (no search filter).
      */
     Page<ClientEntity> findByIsActiveTrue(Pageable pageable);
 
-    // ------------------------------------------------------------------------
-    // ALTERNATIVE SEARCH VARIANTS
-    // ------------------------------------------------------------------------
-
     /**
-     * Searches clients by an {@code active} flag and a free-text query
-     * across companyName, firstName, lastName, and email.
-     *
-     * @param active  whether to filter only active/inactive clients
-     * @param search  free-text term (case-insensitive)
-     * @param pageable pagination and sorting configuration
-     * @return a {@link Page} of filtered clients
+     * Compatibility overload that allows an activeOnly flag (ignored here).
      */
-    @Query("SELECT c FROM ClientEntity c " +
-            "WHERE c.isActive = :active " +
-            "AND (LOWER(c.companyName) LIKE LOWER(CONCAT('%', :search, '%')) " +
-            "  OR LOWER(c.firstName) LIKE LOWER(CONCAT('%', :search, '%')) " +
-            "  OR LOWER(c.lastName) LIKE LOWER(CONCAT('%', :search, '%')) " +
-            "  OR LOWER(c.email) LIKE LOWER(CONCAT('%', :search, '%')))")
-    Page<ClientEntity> search(@Param("active") boolean active,
-                              @Param("search") String search,
-                              Pageable pageable);
-
-    /**
-     * Searches clients across name/email fields without considering active status.
-     *
-     * @param search   free-text term (case-insensitive)
-     * @param pageable pagination and sorting configuration
-     * @return a {@link Page} of all matching clients
-     */
-    @Query("SELECT c FROM ClientEntity c " +
-            "WHERE (LOWER(c.companyName) LIKE LOWER(CONCAT('%', :search, '%')) " +
-            "   OR LOWER(c.firstName) LIKE LOWER(CONCAT('%', :search, '%')) " +
-            "   OR LOWER(c.lastName) LIKE LOWER(CONCAT('%', :search, '%')) " +
-            "   OR LOWER(c.email) LIKE LOWER(CONCAT('%', :search, '%')))")
-    Page<ClientEntity> searchAll(@Param("search") String search, Pageable pageable);
-
-    // Returns true if any client exists for the company+email combination
-    boolean existsByCompanyNameIgnoreCaseAndEmailIgnoreCase(String companyName, String email);
-
-    // Optional: find client by email (useful to map errors or to detect global duplicates)
-    Optional<ClientEntity> findByEmailIgnoreCase(String email);
-
-    // Optional: if you want existence check for a company (if companies are only stored here)
-    boolean existsByCompanyNameIgnoreCase(String companyName);
-
-    // returns 0..n matching records for the given company+email (case-insensitive)
-    List<ClientEntity> findAllByCompanyNameIgnoreCaseAndEmailIgnoreCase(String companyName, String email);
-
+    default Page<ClientEntity> search(boolean activeOnly, String q, Pageable pageable) {
+        return search(q, pageable);
+    }
 }
