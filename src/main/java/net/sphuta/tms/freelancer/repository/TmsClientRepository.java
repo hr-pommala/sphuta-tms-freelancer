@@ -7,6 +7,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
+import java.util.Optional;
+
 /**
  * ===========================================================
  * TmsClientRepository
@@ -106,5 +109,17 @@ public interface TmsClientRepository extends JpaRepository<ClientEntity, Integer
             "   OR LOWER(c.lastName) LIKE LOWER(CONCAT('%', :search, '%')) " +
             "   OR LOWER(c.email) LIKE LOWER(CONCAT('%', :search, '%')))")
     Page<ClientEntity> searchAll(@Param("search") String search, Pageable pageable);
+
+    // Returns true if any client exists for the company+email combination
+    boolean existsByCompanyNameIgnoreCaseAndEmailIgnoreCase(String companyName, String email);
+
+    // Optional: find client by email (useful to map errors or to detect global duplicates)
+    Optional<ClientEntity> findByEmailIgnoreCase(String email);
+
+    // Optional: if you want existence check for a company (if companies are only stored here)
+    boolean existsByCompanyNameIgnoreCase(String companyName);
+
+    // returns 0..n matching records for the given company+email (case-insensitive)
+    List<ClientEntity> findAllByCompanyNameIgnoreCaseAndEmailIgnoreCase(String companyName, String email);
 
 }

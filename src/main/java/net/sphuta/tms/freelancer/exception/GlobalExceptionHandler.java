@@ -145,11 +145,38 @@ public class GlobalExceptionHandler {
     /**
      * Handles database integrity violations (e.g., duplicate key, FK constraint).
      */
+//    @ExceptionHandler(DataIntegrityViolationException.class)
+//    public ResponseEntity<TmsApiResponse<?>> dbConflicts(DataIntegrityViolationException ex) {
+//        log.error("DataIntegrityViolationException handled: {}", ex.getMostSpecificCause().getMessage());
+//        return wrap(HttpStatus.CONFLICT, "Unique or FK constraint violated", null);
+//    }
+
+
+    /**
+     * Handles database integrity violations (e.g., duplicate key, FK constraint).
+     * Attempts to map known DB constraint names to friendly messages.
+     */
     @ExceptionHandler(DataIntegrityViolationException.class)
-    public ResponseEntity<TmsApiResponse<?>> dbConflicts(DataIntegrityViolationException ex) {
-        log.error("DataIntegrityViolationException handled: {}", ex.getMostSpecificCause().getMessage());
-        return wrap(HttpStatus.CONFLICT, "Unique or FK constraint violated", null);
+    public ResponseEntity<TmsApiResponse<?>> dbConflicts(DataIntegrityViolationException ex, HttpServletRequest req) {
+        String causeMsg = ex.getMostSpecificCause() != null ? ex.getMostSpecificCause().getMessage() : ex.getMessage();
+        log.error("DataIntegrityViolationException on {}: {}", req.getRequestURI(), causeMsg);
+
+        // Friendly messages for common constraints
+        String message = "Unique or FK constraint violated";
+        if (causeMsg != null) {
+            String lowered = causeMsg.toLowerCase();
+            if (lowered.contains("uq_clients_company_email")
+                    || (lowered.contains("unique") && lowered.contains("company") && lowered.contains("email"))) {
+                message = "Email already in use for this company";
+            } else if (lowered.contains("foreign key") || lowered.contains("fk_")) {
+                message = "Referenced entity not found (foreign key violation)";
+            }
+        }
+
+        return wrap(HttpStatus.CONFLICT, message, null);
     }
+
+
 
     /**
      * Handles illegal arguments passed to APIs or services.
@@ -194,4 +221,5 @@ public class GlobalExceptionHandler {
         var body = TmsApiResponse.failure(status, message, details);
         return ResponseEntity.status(status).body(body);
     }
+
 }

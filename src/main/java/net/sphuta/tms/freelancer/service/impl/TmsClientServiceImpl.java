@@ -11,12 +11,14 @@ import net.sphuta.tms.freelancer.repository.TmsInvoiceRepository;
 import net.sphuta.tms.freelancer.repository.TmsTimeEntryRepository;
 import net.sphuta.tms.freelancer.util.TmsClientMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.stream.Collectors;
 
 /**
@@ -124,10 +126,51 @@ public class TmsClientServiceImpl {
     @Transactional
     public TmsClientDto create(TmsClientDto req) {
         log.debug("Creating new client: {}", req);
-        ClientEntity saved = repo.save(TmsClientMapper.toNewEntity(req));
-        log.info("Created client id={}", saved.getId());
-        return TmsClientMapper.toResponse(saved);
+
+        // 1) Basic validation: companyName required (per your request)
+        if (req.companyName() == null || req.companyName().isBlank()) {
+            log.warn("Create rejected: missing companyName");
+            throw new TmsException(HttpStatus.BAD_REQUEST, "companyName is required");
+        }
+
+        // 1.a) Optional: if you have a CompanyRepository (master companies table), check that it exists.
+        // Uncomment and inject CompanyRepository if applicable.
+    /*
+    if (!companyRepo.existsByNameIgnoreCase(req.companyName())) {
+        log.warn("Create rejected: company does not exist: {}", req.companyName());
+        throw new TmsException(HttpStatus.BAD_REQUEST, "Company does not exist: " + req.companyName());
     }
+    */
+
+        // 2) Ensure email uniqueness for the company
+        String email = req.email();
+        if (email == null || email.isBlank()) {
+            log.warn("Create rejected: email required");
+            throw new TmsException(HttpStatus.BAD_REQUEST, "email is required");
+        }
+
+        if (repo.existsByCompanyNameIgnoreCaseAndEmailIgnoreCase(req.companyName(), email)) {
+            log.warn("Create rejected: email already used for company={} email={}", req.companyName(), email);
+            throw new TmsException(HttpStatus.CONFLICT, "Email already in use for this company");
+        }
+
+        // 3) Proceed to create
+        try {
+            ClientEntity toSave = TmsClientMapper.toNewEntity(req);
+            ClientEntity saved = repo.save(toSave);
+            log.info("Created client id={}", saved.getId());
+            return TmsClientMapper.toResponse(saved);
+        } catch (DataIntegrityViolationException ex) {
+            log.error("DataIntegrityViolation during create (company={} email={}): {}",
+                    req.companyName(), req.email(), ex.getMessage(), ex);
+            // DB fallback (e.g. race condition) → same friendly 409 message
+            throw new TmsException(HttpStatus.CONFLICT, "Email already in use for this company");
+        } catch (Exception ex) {
+            log.error("Unexpected error during create: {}", ex.getMessage(), ex);
+            throw new TmsException(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error");
+        }
+    }
+
 
     /**
      * Updates an existing client.
@@ -139,12 +182,54 @@ public class TmsClientServiceImpl {
     @Transactional
     public TmsClientDto update(Integer id, TmsClientDto req) {
         log.debug("Updating client id={} with details={}", id, req);
-        ClientEntity e = require(id);
-        TmsClientMapper.updateEntity(req, e);
-        e = repo.save(e);
-        log.info("Updated client id={}", id);
-        return TmsClientMapper.toResponse(e);
+        ClientEntity existing = require(id);
+
+        // Determine incoming (effective) company and email
+        String incomingCompany = req.companyName() != null ? req.companyName().trim() : existing.getCompanyName();
+        String incomingEmail   = req.email() != null ? req.email().trim() : existing.getEmail();
+
+        // Basic validation
+        if (incomingCompany == null || incomingCompany.isBlank()) {
+            log.warn("Update rejected: companyName cannot be empty for id={}", id);
+            throw new TmsException(HttpStatus.BAD_REQUEST, "companyName is required");
+        }
+        if (incomingEmail == null || incomingEmail.isBlank()) {
+            log.warn("Update rejected: email cannot be empty for id={}", id);
+            throw new TmsException(HttpStatus.BAD_REQUEST, "email is required");
+        }
+
+        // --- Robust conflict check using company+email (returns list to avoid NonUniqueResultException) ---
+        List<ClientEntity> matches = repo.findAllByCompanyNameIgnoreCaseAndEmailIgnoreCase(incomingCompany, incomingEmail);
+
+        // If there are matches, we must ensure all matches are this same record (allowed) otherwise conflict
+        if (!matches.isEmpty()) {
+            boolean onlySelf = matches.size() == 1 && matches.get(0).getId().equals(id);
+            if (!onlySelf) {
+                log.warn("Update conflict: company={} email={} already used by another client(s): ids={}",
+                        incomingCompany, incomingEmail,
+                        matches.stream().map(ClientEntity::getId).toList());
+                throw new TmsException(HttpStatus.CONFLICT, "Email already in use for this company");
+            }
+        }
+
+        // Apply DTO -> entity changes
+        TmsClientMapper.updateEntity(req, existing);
+
+        // Save with DB-level exception handling (race conditions fallback)
+        try {
+            existing = repo.save(existing);
+            log.info("Updated client id={}", id);
+            return TmsClientMapper.toResponse(existing);
+        } catch (DataIntegrityViolationException ex) {
+            log.error("DataIntegrityViolation during update id={} : {}", id, ex.getMessage(), ex);
+            throw new TmsException(HttpStatus.CONFLICT, "Email already in use for this company");
+        } catch (Exception ex) {
+            log.error("Unexpected error updating client id={}: {}", id, ex.getMessage(), ex);
+            throw new TmsException(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error");
+        }
     }
+
+
 
     // ------------------------------------------------------------------------
     // DELETE

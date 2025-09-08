@@ -35,7 +35,9 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "clients")
+@Table(name = "clients" , uniqueConstraints = {
+        @UniqueConstraint(name = "uq_clients_company_email", columnNames = {"company_name", "email"})
+})
 public class ClientEntity {
 
     // ------------------------------------------------------------------------
@@ -56,11 +58,12 @@ public class ClientEntity {
     private String name;
 
     /** Unique email address for client. */
-    @Column(nullable = false, unique = true, length = 255)
+    @Column(nullable = false,length = 255)
     private String email;
 
-    /** Company name (if applicable). */
-    @Column(length = 255)
+    // note: column names default to field names; to match unique constraint column names,
+    // either rename columns or explicitly set column names:
+    @Column(name = "company_name", length = 255)
     private String companyName;
 
     /** Contact’s first name. */
