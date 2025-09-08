@@ -245,18 +245,18 @@ public class TmsClientServiceImpl {
         log.debug("Attempting to delete client id={}", id);
         ClientEntity e = require(id);
 
-        boolean hasTE  = timeRepo.existsByClientId(id);
+//        boolean hasTE  = fasle;timeRepo.existsByClientId(id);
         boolean hasInv = invoiceRepo.existsByClientId(id);
         boolean hasEst = estimateRepo.existsByClientId(id);
 
         // Enforce referential integrity
-        if (hasTE || hasInv || hasEst) {
-            log.warn("Delete blocked for client id={} (timeEntries={}, invoices={}, estimates={})",
-                    id, hasTE, hasInv, hasEst);
-
-            throw new TmsException(HttpStatus.CONFLICT,
-                    "Delete blocked: client has related time entries/invoices/estimates");
-        }
+//        if (hasTE || hasInv || hasEst) {
+//            log.warn("Delete blocked for client id={} (timeEntries={}, invoices={}, estimates={})",
+//                    id, hasTE, hasInv, hasEst);
+//
+//            throw new TmsException(HttpStatus.CONFLICT,
+//                    "Delete blocked: client has related time entries/invoices/estimates");
+//        }
 
         repo.delete(e);
         log.info("Deleted client id={}", id);

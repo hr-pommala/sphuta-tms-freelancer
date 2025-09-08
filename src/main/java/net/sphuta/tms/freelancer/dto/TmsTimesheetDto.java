@@ -37,7 +37,7 @@ public record TmsTimesheetDto(
         // ---------------- RESPONSE FIELDS ----------------
 
         @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-        Integer id,
+        Integer timesheetId,
 
         @JsonProperty(access = JsonProperty.Access.READ_ONLY)
         String projectName,

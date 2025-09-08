@@ -2,6 +2,8 @@ package net.sphuta.tms.freelancer.service;
 
 import net.sphuta.tms.freelancer.dto.*;
 
+import java.util.List;
+
 /**
  * Service interface for managing Timesheets in the Freelancer Timesheet Management System.
  */
@@ -46,4 +48,23 @@ public interface TmsTimesheetService {
      * @param id unique identifier of the timesheet
      */
     void lock(Integer id);
+
+    /**
+     * Retrieve all timesheets (non-paged).
+     *
+     * @return list of {@link TmsTimesheetDto}
+     */
+    List<TmsTimesheetDto> getAll();
+
+    /**
+     * Delete a timesheet by id.
+     *
+     * Business rules:
+     * - If the timesheet does not exist -> NotFoundException
+     * - Deletes associated time entries first to avoid FK constraints, then deletes the timesheet
+     *
+     * @param id unique identifier of the timesheet
+     */
+    void delete(Integer id);
+
 }

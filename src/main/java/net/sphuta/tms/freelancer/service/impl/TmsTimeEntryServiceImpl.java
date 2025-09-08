@@ -5,6 +5,8 @@ import net.sphuta.tms.freelancer.dto.TimeEntryDto;
 import net.sphuta.tms.freelancer.entity.TimeEntryEntity;
 import net.sphuta.tms.freelancer.entity.TimesheetEntity;
 import net.sphuta.tms.freelancer.exception.ApiExceptions;
+import net.sphuta.tms.freelancer.exception.ConflictException;
+import net.sphuta.tms.freelancer.exception.NotFoundException;
 import net.sphuta.tms.freelancer.repository.TmsTimeEntryRepository;
 import net.sphuta.tms.freelancer.repository.TmsTimesheetRepository;
 import net.sphuta.tms.freelancer.service.TmsTimeEntryService;
@@ -15,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.OffsetTime;
+import java.util.List;
 
 /**
  * Implementation of {@link TmsTimeEntryService}.
@@ -50,7 +53,7 @@ public class TmsTimeEntryServiceImpl implements TmsTimeEntryService {
      *   <li>Hours must be greater than zero</li>
      * </ul>
      *
-     * <p>The cost is computed as <code>hours × rateAtEntry</code>. Start and end times
+     * <p>The cost is computed as <code>hours × rateAtEntry. Start and end times
      * are auto-generated based on current time and hours worked.
      *
      * @param req the incoming {@link TimeEntryDto} request
@@ -68,13 +71,13 @@ public class TmsTimeEntryServiceImpl implements TmsTimeEntryService {
         TimesheetEntity t = timesheetRepo.findById(req.timesheetId())
                 .orElseThrow(() -> {
                     log.warn("create time-entry: timesheet not found: {}", req.timesheetId());
-                    return new ApiExceptions.NotFoundException("Timesheet not found");
+                    return new NotFoundException("Timesheet not found");
                 });
 
         // ✅ Ensure the timesheet is mutable (not locked)
         if (!t.getStatus().isMutable()) {
             log.warn("create time-entry: timesheet={} status={} locked", t.getId(), t.getStatus());
-            throw new ApiExceptions.ConflictException("Timesheet is LOCKED and cannot be modified");
+            throw new ConflictException("Timesheet is LOCKED and cannot be modified");
         }
 
         // ✅ Ensure the entry date falls within the timesheet’s valid period
@@ -141,17 +144,34 @@ public class TmsTimeEntryServiceImpl implements TmsTimeEntryService {
         // ✅ Lookup entry by ID
         var e = entryRepo.findById(id).orElseThrow(() -> {
             log.warn("delete time-entry: not found entryId={}", id);
-            return new ApiExceptions.NotFoundException("Time entry not found");
+            return new NotFoundException("Time entry not found");
         });
 
         // ✅ Prevent deletion of invoiced entries
         if (e.getDescription() != null && e.getDescription().toLowerCase().contains("[invoiced]")) {
             log.warn("delete time-entry: invoiced entryId={}", id);
-            throw new ApiExceptions.ConflictException("Time entry already invoiced; cannot delete");
+            throw new ConflictException("Time entry already invoiced; cannot delete");
         }
 
         // ✅ Perform deletion
         entryRepo.delete(e);
         log.info("delete time-entry: success entryId={}", id);
     }
+
+    /**
+     * Retrieve all time entries across all timesheets.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<TimeEntryDto> getAll() {
+        log.info("Service: fetching all time-entries");
+
+        var all = entryRepo.findAll();
+
+        log.info("Service: found {} time-entries", all.size());
+
+        var entryList = TmsTimesheetMappers.toEntryResponseList(all);
+        return entryList;
+    }
+
 }

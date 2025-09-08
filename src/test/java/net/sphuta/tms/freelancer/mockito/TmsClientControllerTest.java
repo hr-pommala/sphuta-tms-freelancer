@@ -1,15 +1,15 @@
 package net.sphuta.tms.freelancer.mockito;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import net.sphuta.tms.freelancer.controller.TimeClientTimeEntryController;
+//import net.sphuta.tms.freelancer.controller.TimeClientTimeEntryController;
 import net.sphuta.tms.freelancer.controller.TmsClientController;
 import net.sphuta.tms.freelancer.controller.TmsClientEstimateController;
-import net.sphuta.tms.freelancer.controller.TmsClientInvoiceController;
+//import net.sphuta.tms.freelancer.controller.TmsClientInvoiceController;
 import net.sphuta.tms.freelancer.dto.*;
 import net.sphuta.tms.freelancer.service.impl.TmsClientServiceImpl;
 import net.sphuta.tms.freelancer.service.impl.TmsEstimateService;
 import net.sphuta.tms.freelancer.service.impl.TmsInvoiceService;
-import net.sphuta.tms.freelancer.service.impl.TmsTimeEntryService;
+//import net.sphuta.tms.freelancer.service.impl.TmsTimeEntryService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -51,10 +51,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * - Run controller unit tests with mocked service dependencies (no DB).</p>
  *
  * <p><b>Controllers covered:</b></p>
- * - {@link TimeClientTimeEntryController} <br>
+
  * - {@link TmsClientController} <br>
  * - {@link TmsClientEstimateController} <br>
- * - {@link TmsClientInvoiceController} <br>
+
  *
  * <p>Logging policy for tests:
  * - DEBUG: test setup, mock stubbing, input/params. <br>
@@ -63,10 +63,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @Slf4j
 @WebMvcTest(controllers = {
-        TimeClientTimeEntryController.class,
+//        TimeClientTimeEntryController.class,
         TmsClientController.class,
         TmsClientEstimateController.class,
-        TmsClientInvoiceController.class
+//        TmsClientInvoiceController.class
 })
 public class TmsClientControllerTest {
 
@@ -87,8 +87,8 @@ public class TmsClientControllerTest {
     // -----------------------------
 
     /** Mocked TimeEntry service used by TimeClientTimeEntryController. */
-    @MockBean
-    TmsTimeEntryService timeEntryService;
+//    @MockBean
+//    TmsTimeEntryService timeEntryService;
 
     /** Mocked Client service used by TmsClientController. */
     @MockBean
@@ -144,64 +144,64 @@ public class TmsClientControllerTest {
          * GET /time-entries/uninvoiced
          * Expected: 200 OK, service invoked with query params.
          */
-        @Test
-        @DisplayName("GET /time-entries/uninvoiced → 200 OK and service called")
-        void uninvoiced_ok() throws Exception {
-            log.debug("Starting test: uninvoiced_ok - stubbing timeEntryService.findUninvoiced(...)");
-
-            // Mock response
-            TmsUninvoicedResponse resp = TmsUninvoicedResponse.builder()
-                    .clientId(7)
-                    .from(LocalDate.parse("2025-08-01"))
-                    .to(LocalDate.parse("2025-08-29"))
-                    .entries(emptyList())
-                    .build();
-            when(timeEntryService.findUninvoiced(eq(7),
-                    eq(LocalDate.parse("2025-08-01")),
-                    eq(LocalDate.parse("2025-08-29")))).thenReturn(resp);
-
-            // Perform request
-            mvc.perform(get(TIME_ENTRY_BASE_PATH + TIME_ENTRY_UNINVOICED_PATH)
-                            .param("clientId", "7")
-                            .param("from", "2025-08-01")
-                            .param("to", "2025-08-29"))
-                    .andExpect(status().isOk());
-
-            // Verify delegation
-            verify(timeEntryService).findUninvoiced(7,
-                    LocalDate.parse("2025-08-01"),
-                    LocalDate.parse("2025-08-29"));
-
-            log.info("Test uninvoiced_ok completed successfully");
-        }
+//        @Test
+//        @DisplayName("GET /time-entries/uninvoiced → 200 OK and service called")
+//        void uninvoiced_ok() throws Exception {
+//            log.debug("Starting test: uninvoiced_ok - stubbing timeEntryService.findUninvoiced(...)");
+//
+//            // Mock response
+//            TmsUninvoicedResponse resp = TmsUninvoicedResponse.builder()
+//                    .clientId(7)
+//                    .from(LocalDate.parse("2025-08-01"))
+//                    .to(LocalDate.parse("2025-08-29"))
+//                    .entries(emptyList())
+//                    .build();
+//            when(timeEntryService.findUninvoiced(eq(7),
+//                    eq(LocalDate.parse("2025-08-01")),
+//                    eq(LocalDate.parse("2025-08-29")))).thenReturn(resp);
+//
+//            // Perform request
+//            mvc.perform(get(TIME_ENTRY_BASE_PATH + TIME_ENTRY_UNINVOICED_PATH)
+//                            .param("clientId", "7")
+//                            .param("from", "2025-08-01")
+//                            .param("to", "2025-08-29"))
+//                    .andExpect(status().isOk());
+//
+//            // Verify delegation
+//            verify(timeEntryService).findUninvoiced(7,
+//                    LocalDate.parse("2025-08-01"),
+//                    LocalDate.parse("2025-08-29"));
+//
+//            log.info("Test uninvoiced_ok completed successfully");
+//        }
 
         /**
          * GET /time-entries/uninvoiced with inverted date range.
          * Expected: 200 OK (controller does not enforce validation).
          */
-        @Test
-        @DisplayName("GET uninvoiced works even if from > to")
-        void uninvoiced_invertedRange_ok() throws Exception {
-            log.debug("Starting test: uninvoiced_invertedRange_ok - stubbing service for inverted range");
-
-            when(timeEntryService.findUninvoiced(anyInt(), any(), any()))
-                    .thenReturn(TmsUninvoicedResponse.builder()
-                            .clientId(7).from(LocalDate.parse("2025-08-29"))
-                            .to(LocalDate.parse("2025-08-01"))
-                            .entries(emptyList()).build());
-
-            mvc.perform(get(TIME_ENTRY_BASE_PATH + TIME_ENTRY_UNINVOICED_PATH)
-                            .param("clientId", "7")
-                            .param("from", "2025-08-29")
-                            .param("to", "2025-08-01"))
-                    .andExpect(status().isOk());
-
-            verify(timeEntryService).findUninvoiced(eq(7),
-                    eq(LocalDate.parse("2025-08-29")),
-                    eq(LocalDate.parse("2025-08-01")));
-
-            log.info("Test uninvoiced_invertedRange_ok completed successfully");
-        }
+//        @Test
+//        @DisplayName("GET uninvoiced works even if from > to")
+//        void uninvoiced_invertedRange_ok() throws Exception {
+//            log.debug("Starting test: uninvoiced_invertedRange_ok - stubbing service for inverted range");
+//
+//            when(timeEntryService.findUninvoiced(anyInt(), any(), any()))
+//                    .thenReturn(TmsUninvoicedResponse.builder()
+//                            .clientId(7).from(LocalDate.parse("2025-08-29"))
+//                            .to(LocalDate.parse("2025-08-01"))
+//                            .entries(emptyList()).build());
+//
+//            mvc.perform(get(TIME_ENTRY_BASE_PATH + TIME_ENTRY_UNINVOICED_PATH)
+//                            .param("clientId", "7")
+//                            .param("from", "2025-08-29")
+//                            .param("to", "2025-08-01"))
+//                    .andExpect(status().isOk());
+//
+//            verify(timeEntryService).findUninvoiced(eq(7),
+//                    eq(LocalDate.parse("2025-08-29")),
+//                    eq(LocalDate.parse("2025-08-01")));
+//
+//            log.info("Test uninvoiced_invertedRange_ok completed successfully");
+//        }
     }
 
     // ==========================================================

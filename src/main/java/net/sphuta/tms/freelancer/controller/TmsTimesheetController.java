@@ -59,7 +59,7 @@ public class TmsTimesheetController {
         var data = tmsTimesheetService.create(req);
 
         // Log result
-        log.debug("Timesheet created id={} status={}", data.id(), data.status());
+        log.debug("Timesheet created id={} status={}", data.timesheetId(), data.status());
 
         // Return response
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -81,7 +81,7 @@ public class TmsTimesheetController {
 
         // If entries are null, log size as 0
         log.debug("Fetched timesheet id={} status={} entries={}",
-                data.id(), data.status(), data.entries() == null ? 0 : data.entries().size());
+                data.timesheetId(), data.status(), data.entries() == null ? 0 : data.entries().size());
 
         return ResponseEntity.ok(TmsApiResponse.success(HttpStatus.OK, TmsMessages.TIMESHEET_FETCHED, data));
     }
@@ -187,4 +187,60 @@ public class TmsTimesheetController {
                 TmsApiResponse.success(HttpStatus.OK, TmsMessages.TIME_ENTRY_DELETED)
         );
     }
+
+    /**
+     * Get all timesheets.
+     *
+     * @return list of all timesheets wrapped in {@link TmsApiResponse}
+     */
+    @Operation(summary = "Get All Timesheets", description = "Retrieve all timesheets with their details.")
+    @GetMapping("/timesheets")
+    public ResponseEntity<TmsApiResponse<java.util.List<TmsTimesheetDto>>> getAll() {
+        log.info("GET /timesheets");
+
+        var data = tmsTimesheetService.getAll();
+
+        log.debug("Fetched {} timesheets", data == null ? 0 : data.size());
+
+        return ResponseEntity.ok(TmsApiResponse.success(HttpStatus.OK, TmsMessages.TIMESHEETS_FETCHED, data));
+    }
+
+    /**
+     * Delete a specific timesheet by ID.
+     *
+     * @param id timesheet ID
+     * @return success response
+     */
+    @Operation(summary = "Delete Timesheet", description = "Delete a timesheet and its associated entries by ID.")
+    @DeleteMapping("/timesheets/{id}")
+    public ResponseEntity<TmsApiResponse<Void>> delete(@PathVariable Integer id) {
+        log.info("DELETE /timesheets/{}", id);
+
+        tmsTimesheetService.delete(id);
+
+        log.debug("Deleted timesheet id={}", id);
+
+        return ResponseEntity.ok(
+                TmsApiResponse.success(HttpStatus.OK, TmsMessages.TIMESHEET_DELETED)
+        );
+    }
+
+    /**
+     * Get all time entries across timesheets.
+     *
+     * @return list of time entries wrapped in {@link TmsApiResponse}
+     */
+    @Operation(summary = "Get All Time Entries", description = "Retrieve all time entries across all timesheets.")
+    @GetMapping("/time-entries")
+    public ResponseEntity<TmsApiResponse<java.util.List<TimeEntryDto>>> getAllTimeEntries() {
+        log.info("GET /time-entries");
+
+        var data = tmsTimeEntryService.getAll();
+
+        log.debug("Fetched {} time-entries", data == null ? 0 : data.size());
+
+        return ResponseEntity.ok(TmsApiResponse.success(HttpStatus.OK, TmsMessages.ENTRIES_FETCHED, data));
+    }
+
+
 }

@@ -82,6 +82,13 @@ public final class TmsMessages {
 
     /** Message displayed when a timesheet is successfully locked */
     public static final String TIMESHEET_LOCKED = "Timesheet locked successfully";
+
+    /** Message displayed when a timesheet is successfully deleted */
+    public static final String TIMESHEET_DELETED = "Timesheet deleted successfully";
+
+    /** Message displayed when entries for a timesheet are successfully fetched */
+    public static final String ENTRIES_FETCHED = "Entries fetched successfully";
+
     // ===================== EstimateController =====================
     public static final String ESTIMATE_BASE_PATH = "/api/v1/estimates";
 

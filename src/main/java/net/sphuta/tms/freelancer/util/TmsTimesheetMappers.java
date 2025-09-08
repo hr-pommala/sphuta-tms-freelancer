@@ -135,6 +135,28 @@ public class TmsTimesheetMappers {
         return response;
     }
 
+    /** Map list of TimesheetEntity -> List<TmsTimesheetDto> */
+    public static List<TmsTimesheetDto> toTimesheetResponseList(List<TimesheetEntity> entities) {
+        if (entities == null || entities.isEmpty()) {
+            return Collections.emptyList();
+        }
+        var timesheetList = entities.stream()
+                .map(TmsTimesheetMappers::toDetail)
+                .toList();
+        return timesheetList;
+    }
+
+    /** Map list of TimeEntryEntity -> List<TimeEntryDto> */
+    public static List<TimeEntryDto> toEntryResponseList(List<TimeEntryEntity> entities) {
+        if (entities == null || entities.isEmpty()) {
+            return Collections.emptyList();
+        }
+        var entryList = entities.stream()
+                .map(TmsTimesheetMappers::toEntryResponse)
+                .toList();
+        return entryList;
+    }
+
 }
 
 
