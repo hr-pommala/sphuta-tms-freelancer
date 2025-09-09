@@ -35,7 +35,9 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "clients")
+@Table(name = "clients",uniqueConstraints = @UniqueConstraint(
+        name = "uq_clients_company_email_unique",
+        columnNames = {"company_lower", "email_lower"}))
 public class ClientEntity {
 
     // ------------------------------------------------------------------------
@@ -56,7 +58,7 @@ public class ClientEntity {
     private String name;
 
     /** Unique email address for client. */
-    @Column(nullable = false, unique = true, length = 255)
+    @Column(nullable = false, length = 255)
     private String email;
 
     /** Company name (if applicable). */
@@ -149,11 +151,11 @@ public class ClientEntity {
 
     /** Record creation timestamp (set only once). */
     @Column(nullable = false, updatable = false)
-    private Instant createdAt;
+    private Instant createdDt;
 
     /** Record last updated timestamp (updated automatically). */
     @Column(nullable = false)
-    private Instant updatedAt;
+    private Instant updatedDt;
 
     // ------------------------------------------------------------------------
     // RELATIONSHIPS
@@ -177,8 +179,8 @@ public class ClientEntity {
     @PrePersist
     protected void onCreate() {
         Instant now = Instant.now();
-        this.createdAt = now;
-        this.updatedAt = now;
+        this.createdDt = now;
+        this.updatedDt = now;
         generateDisplayName();
     }
 
@@ -188,7 +190,7 @@ public class ClientEntity {
      */
     @PreUpdate
     protected void onUpdate() {
-        this.updatedAt = Instant.now();
+        this.updatedDt = Instant.now();
         generateDisplayName();
     }
 

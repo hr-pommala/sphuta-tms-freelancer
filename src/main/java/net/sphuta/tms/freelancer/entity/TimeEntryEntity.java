@@ -60,12 +60,12 @@ public class TimeEntryEntity {
     private BigDecimal costAtEntry;
 
     @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private OffsetDateTime createdAt;
+    @Column(name = "created_dt", nullable = false, updatable = false)
+    private OffsetDateTime createdDt;
 
     @UpdateTimestamp
-    @Column(name = "updated_at", nullable = false)
-    private OffsetDateTime updatedAt;
+    @Column(name = "updated_dt", nullable = false)
+    private OffsetDateTime updatedDt;
 
 //    @Deprecated
 //    @Column(name = "client_id")
