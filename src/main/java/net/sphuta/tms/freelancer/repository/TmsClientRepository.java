@@ -124,4 +124,12 @@ public interface TmsClientRepository extends JpaRepository<ClientEntity, Integer
      */
     Optional<ClientEntity> findByCompanyNameIgnoreCaseAndEmailIgnoreCase(String companyName, String email);
 
+    // ---------------------------
+    // Per-user uniqueness checks
+    // ---------------------------
+    boolean existsByUserIdAndEmailIgnoreCase(Integer userId, String email);
+
+    boolean existsByUserIdAndEmailIgnoreCaseAndIdNot(Integer userId, String email, Integer id);
+
+    Optional<ClientEntity> findByUserIdAndCompanyNameIgnoreCaseAndEmailIgnoreCase(Integer userId, String companyName, String email);
 }

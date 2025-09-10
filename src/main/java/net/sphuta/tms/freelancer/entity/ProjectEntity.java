@@ -129,16 +129,16 @@ public class ProjectEntity {
      * Automatically populated by Hibernate.
      */
     @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt;
+    @Column(name = "created_dt", nullable = false, updatable = false)
+    private Instant createdDt;
 
     /**
      * Timestamp marking the last time the record was updated.
      * Automatically managed by Hibernate.
      */
     @UpdateTimestamp
-    @Column(name = "updated_at", nullable = false)
-    private Instant updatedAt;
+    @Column(name = "updated_dt", nullable = false)
+    private Instant updatedDt;
 
     /**
      * Version field used for optimistic locking.

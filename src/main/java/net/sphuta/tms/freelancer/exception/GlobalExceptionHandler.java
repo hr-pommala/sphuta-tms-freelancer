@@ -1,14 +1,18 @@
 package net.sphuta.tms.freelancer.exception;
 
+import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import net.sphuta.tms.freelancer.response.TmsApiResponse;
+import net.sphuta.tms.freelancer.util.TmsResponseUtil;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import jakarta.validation.ConstraintViolationException;
@@ -205,4 +209,32 @@ public class GlobalExceptionHandler {
         return wrap(HttpStatus.CONFLICT, "Unique or FK constraint violated", null);
     }
 
+    /**
+     * Handle cases where a requested entity is not found in the database.
+     * Returns a 404 Not Found response.
+     *
+     * @param ex EntityNotFoundException thrown when entity does not exist
+     * @return SphutaTmsApiResponse indicating entity not found
+     */
+    @ExceptionHandler(EntityNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public TmsApiResponse<Void> handleEntityNotFound(EntityNotFoundException ex) {
+        log.warn("Entity not found: {}", ex.getMessage());
+        return TmsResponseUtil.failure(HttpStatus.NOT_FOUND, ex.getMessage());
+    }
+
+    /**
+     * Handle unsupported HTTP method requests.
+     * Returns a 405 Method Not Allowed response.
+     *
+     * @param ex HttpRequestMethodNotSupportedException thrown for unsupported methods
+     * @return SphutaTmsApiResponse indicating method not allowed
+     */
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    @ResponseStatus(HttpStatus.METHOD_NOT_ALLOWED)
+    public TmsApiResponse<Void> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
+        String message = "HTTP method not supported: " + ex.getMethod();
+        log.error(message);
+        return TmsResponseUtil.failure(HttpStatus.METHOD_NOT_ALLOWED, message);
+    }
 }

@@ -53,6 +53,11 @@ public class ClientEntity {
     // BASIC INFO
     // ------------------------------------------------------------------------
 
+    /** Owner user id FK -> users.id (application enforces FK on DB). */
+    @Column(name = "user_id", nullable = false)
+    private Integer userId;
+
+
     /** Display name (auto-generated from firstName + lastName). */
     @Column(nullable = false, length = 255)
     private String name;

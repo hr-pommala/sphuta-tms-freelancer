@@ -44,6 +44,9 @@ public record TmsClientDto(
         // ------------------------------------------------------------------------
         // CONTACT DETAILS
         // ------------------------------------------------------------------------
+        @NotNull(message = "userId is required")
+        @Schema(description = "Owner user ID", example = "1")
+        Integer userId,
 
         /** Primary billing email (required, validated with @Email). */
         @NotBlank(message = "email is required")

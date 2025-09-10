@@ -56,6 +56,9 @@ public final class TmsClientMapper {
         ClientEntity e = new ClientEntity();
         applyCommonFields(r, e);
 
+        // set user id (required)
+        e.setUserId(r.userId());
+
         // boolean fields: use provided value when present, otherwise sensible defaults
         e.setSendReminders(Boolean.TRUE.equals(r.sendReminders()));
         e.setChargeLateFees(Boolean.TRUE.equals(r.chargeLateFees()));
@@ -94,6 +97,10 @@ public final class TmsClientMapper {
 
         applyCommonFields(r, e);
 
+        // update userId only when provided (should normally be required and immutable)
+        if (r.userId() != null) {
+            e.setUserId(r.userId());
+        }
         if (r.sendReminders() != null) e.setSendReminders(r.sendReminders());
         if (r.chargeLateFees() != null) e.setChargeLateFees(r.chargeLateFees());
         if (r.allowInvoiceAttachments() != null) e.setAllowInvoiceAttachments(r.allowInvoiceAttachments());
@@ -123,6 +130,7 @@ public final class TmsClientMapper {
 
         TmsClientDto dto = TmsClientDto.builder()
                 .id(e.getId())
+                .userId(e.getUserId())
                 .email(e.getEmail())
                 .companyName(e.getCompanyName())
                 .firstName(e.getFirstName())

@@ -91,8 +91,8 @@ public final class TmsProjectMapper {
                 e.getEndDate(),
                 e.getDescription(),
                 e.isActive(),
-                e.getCreatedAt() != null ? FORMATTER.format(e.getCreatedAt()) : null,
-                e.getUpdatedAt() != null ? FORMATTER.format(e.getUpdatedAt()) : null
+                e.getCreatedDt() != null ? FORMATTER.format(e.getCreatedDt()) : null,
+                e.getUpdatedDt() != null ? FORMATTER.format(e.getUpdatedDt()) : null
         );
     }
 

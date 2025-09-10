@@ -9,8 +9,10 @@ import net.sphuta.tms.freelancer.repository.TmsClientRepository;
 import net.sphuta.tms.freelancer.repository.TmsEstimateRepository;
 import net.sphuta.tms.freelancer.repository.TmsInvoiceRepository;
 import net.sphuta.tms.freelancer.repository.TmsTimeEntryRepository;
+import net.sphuta.tms.freelancer.repository.TmsUserRepository;
 import net.sphuta.tms.freelancer.util.TmsClientMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -53,6 +55,7 @@ public class TmsClientServiceImpl {
     @Autowired private TmsTimeEntryRepository timeRepo;
     @Autowired private TmsInvoiceRepository invoiceRepo;
     @Autowired private TmsEstimateRepository estimateRepo;
+    @Autowired private TmsUserRepository userRepo;
 
     //Add this pattern near class-level (static)
     private static final Pattern EMAIL_RX = Pattern.compile(
@@ -130,37 +133,34 @@ public class TmsClientServiceImpl {
     public TmsClientDto create(TmsClientDto req) {
         log.debug("Creating new client: {}", req);
 
-        // Basic presence validation (company + email)
-        if (req == null) {
-            throw new TmsException(HttpStatus.BAD_REQUEST, "Request body is required");
-        }
-        if (req.companyName() == null || req.companyName().trim().isEmpty()) {
-            throw new TmsException(HttpStatus.BAD_REQUEST, "companyName is required");
-        }
-        if (req.email() == null || req.email().trim().isEmpty()) {
-            throw new TmsException(HttpStatus.BAD_REQUEST, "email is required");
+        // Business logic only: user existence and duplicate checks
+        Integer userId = req.userId();
+        if (!userRepo.existsById(userId)) {
+            log.warn("User not found for userId={}", userId);
+            throw new TmsException(HttpStatus.NOT_FOUND, "User not found");
         }
 
-        String company = req.companyName().trim();
-        String email = req.email().trim();
-
-        // Email format validation
-        if (!EMAIL_RX.matcher(email).matches()) {
-            throw new TmsException(HttpStatus.BAD_REQUEST, "Invalid email format");
+        // Duplicate checks
+        boolean existsUser = repo.existsByUserIdAndEmailIgnoreCase(userId, req.email());
+        if (existsUser) {
+            log.warn("Duplicate email for user | userId={}, email={}", userId, req.email());
+            throw new TmsException(HttpStatus.CONFLICT, "Email already in use for this user");
         }
-
-        // Uniqueness check: per-company
-        boolean exists = repo.existsByCompanyNameIgnoreCaseAndEmailIgnoreCase(company, email);
-        if (exists) {
-            log.warn("Duplicate email for company | company={}, email={}", company, email);
+        boolean existsCompany = repo.existsByCompanyNameIgnoreCaseAndEmailIgnoreCase(req.companyName(), req.email());
+        if (existsCompany) {
+            log.warn("Duplicate email for company | company={}, email={}", req.companyName(), req.email());
             throw new TmsException(HttpStatus.CONFLICT, "Email already in use for this company");
         }
 
         ClientEntity entity = TmsClientMapper.toNewEntity(req);
-        ClientEntity saved = repo.save(entity);
-
-        log.info("Created client id={}", saved.getId());
-        return TmsClientMapper.toResponse(saved);
+        try {
+            ClientEntity saved = repo.save(entity);
+            log.info("Created client id={}", saved.getId());
+            return TmsClientMapper.toResponse(saved);
+        } catch (DataIntegrityViolationException ex) {
+            log.warn("Data integrity violation when creating client for userId={}, email={}", userId, req.email(), ex);
+            throw new TmsException(HttpStatus.CONFLICT, "Email already in use for this user");
+        }
     }
 
     /**
@@ -175,35 +175,38 @@ public class TmsClientServiceImpl {
         log.debug("Updating client id={} with details={}", id, req);
         ClientEntity e = require(id);
 
-        // If companyName or email present in req, validate them and check uniqueness.
-        // Accept partial updates: only validate/check when fields are provided.
+        // Only business logic: user existence and duplicate checks
+        Integer reqUserId = req.userId() != null ? req.userId() : e.getUserId();
+        if (!userRepo.existsById(reqUserId)) {
+            log.warn("User not found for userId={}", reqUserId);
+            throw new TmsException(HttpStatus.NOT_FOUND, "User not found");
+        }
+
         String newCompany = req.companyName() != null ? req.companyName().trim() : e.getCompanyName();
         String newEmail   = req.email() != null ? req.email().trim() : e.getEmail();
 
-        if (newCompany == null || newCompany.isEmpty()) {
-            throw new TmsException(HttpStatus.BAD_REQUEST, "companyName is required");
+        // Remove all validation checks (null, blank, format)
+        // Only check for business rule conflicts
+        boolean conflictUser = repo.existsByUserIdAndEmailIgnoreCaseAndIdNot(reqUserId, newEmail, id);
+        if (conflictUser) {
+            log.warn("Email conflict on update | id={}, userId={}, company={}, email={}", id, reqUserId, newCompany, newEmail);
+            throw new TmsException(HttpStatus.CONFLICT, "Email already in use for this user");
         }
-        if (newEmail == null || newEmail.isEmpty()) {
-            throw new TmsException(HttpStatus.BAD_REQUEST, "email is required");
-        }
-
-        if (!EMAIL_RX.matcher(newEmail).matches()) {
-            throw new TmsException(HttpStatus.BAD_REQUEST, "Invalid email format");
-        }
-
-        // Check uniqueness excluding the current id (so updating same record to same values is allowed)
-        boolean conflict = repo.existsByCompanyNameIgnoreCaseAndEmailIgnoreCaseAndIdNot(newCompany, newEmail, id);
-        if (conflict) {
+        boolean conflictCompany = repo.existsByCompanyNameIgnoreCaseAndEmailIgnoreCaseAndIdNot(newCompany, newEmail, id);
+        if (conflictCompany) {
             log.warn("Email conflict on update | id={}, company={}, email={}", id, newCompany, newEmail);
             throw new TmsException(HttpStatus.CONFLICT, "Email already in use for this company");
         }
 
-        // apply updates
         TmsClientMapper.updateEntity(req, e);
-        e = repo.save(e);
-
-        log.info("Updated client id={}", id);
-        return TmsClientMapper.toResponse(e);
+        try {
+            e = repo.save(e);
+            log.info("Updated client id={}", id);
+            return TmsClientMapper.toResponse(e);
+        } catch (DataIntegrityViolationException ex) {
+            log.warn("Data integrity violation when updating client id={} userId={} email={}", id, reqUserId, newEmail, ex);
+            throw new TmsException(HttpStatus.CONFLICT, "Email already in use for this user");
+        }
     }
 
     // ------------------------------------------------------------------------
@@ -219,20 +222,10 @@ public class TmsClientServiceImpl {
     public void delete(Integer id) {
         log.debug("Attempting to delete client id={}", id);
         ClientEntity e = require(id);
-
-       // boolean hasTE  = timeRepo.existsByClientId(id);
-        boolean hasInv = invoiceRepo.existsByClientId(id);
-        boolean hasEst = estimateRepo.existsByClientId(id);
-
-        // Enforce referential integrity
-//        if (hasTE || hasInv || hasEst) {
-//            log.warn("Delete blocked for client id={} (timeEntries={}, invoices={}, estimates={})",
-//                    id, hasTE, hasInv, hasEst);
-//
-//            throw new TmsException(HttpStatus.CONFLICT,
-//                    "Delete blocked: client has related time entries/invoices/estimates");
-//        }
-
+        // boolean hasTE  = timeRepo.existsByClientId(id);
+        // boolean hasInv = invoiceRepo.existsByClientId(id);
+        // boolean hasEst = estimateRepo.existsByClientId(id);
+        // Uncomment and use above if you want to enforce referential integrity
         repo.delete(e);
         log.info("Deleted client id={}", id);
     }

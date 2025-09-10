@@ -16,6 +16,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * ==========================================================
@@ -148,7 +149,24 @@ public class TmsFreelancerApiConfig {
                 registry.addMapping("/**") // applies to all endpoints
                         .allowedOrigins("*") // allow all origins
                         .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD");
+
+
             }
         };
     }
+
+    /**
+     * Map of messages for user CRUD operations.
+     * Example in application.yml:
+     * app:
+     *   messages:
+     *     user:
+     *       create: "User created successfully"
+     *       update: "User updated successfully"
+     */
+    private Map<String, String> user;
+
+    // 🚀 Later you can add more sections like:
+    // private Map<String, String> project;
+    // private Map<String, String> invoice;
 }

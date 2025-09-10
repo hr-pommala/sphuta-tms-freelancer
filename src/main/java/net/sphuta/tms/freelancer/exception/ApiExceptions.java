@@ -18,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class ApiExceptions {
 
+    private ApiExceptions() { /* utility */ }
     /**
      * Exception thrown when a requested resource is not found.
      *
@@ -105,4 +106,19 @@ public class ApiExceptions {
             log.error("Unauthorized: {}", m); // Log error with message
         }
     }
+
+    /**
+     * Generic unchecked API exception used in service layer.
+     * Add fields (status, code) later if needed.
+     */
+    public static class ApiException extends RuntimeException {
+        public ApiException(String message) {
+            super(message);
+        }
+
+        public ApiException(String message, Throwable cause) {
+            super(message, cause);
+        }
+    }
+
 }

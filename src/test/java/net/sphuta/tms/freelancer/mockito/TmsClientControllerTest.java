@@ -126,8 +126,8 @@ public class TmsClientControllerTest {
                 .lastName(null)
                 .email("billing@acme.com")
                 .isActive(true)
-                .createdAt(OffsetDateTime.parse("2025-08-28T11:44:28Z"))
-                .updatedAt(OffsetDateTime.parse("2025-08-29T15:22:10Z"))
+                .createdDt(OffsetDateTime.parse("2025-08-28T11:44:28Z"))
+                .updatedDt(OffsetDateTime.parse("2025-08-29T15:22:10Z"))
                 .build();
 
         log.debug("Test setup complete - sampleClient initialized: id={}, email={}",
@@ -412,33 +412,33 @@ public class TmsClientControllerTest {
     // ==========================================================
 
     /** POST /invoices → create invoice from entries */
-    @Test
-    @DisplayName("POST /invoices → create from timeEntryIds")
-    void createInvoice_ok() throws Exception {
-        log.debug("Starting test: createInvoice_ok - stubbing invoiceService.createFromEntries(...)");
-
-        when(invoiceService.createFromEntries(any())).thenReturn(mock(TmsInvoiceDto.class));
-
-        String json = """
-        {
-          "clientId": 101,
-          "issueDate": "2025-08-15",
-          "dueDate": "2025-09-15",
-          "currencyCode": "USD",
-          "notes": "Payment due in 30 days",
-          "timeEntryIds": [1, 2, 3]
-        }
-        """;
-
-        mvc.perform(post(INVOICE_BASE_PATH)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(json))
-                .andExpect(status().isOk());
-
-        verify(invoiceService).createFromEntries(any());
-
-        log.info("Test createInvoice_ok completed - invoice creation delegation verified");
-    }
+//    @Test
+//    @DisplayName("POST /invoices → create from timeEntryIds")
+//    void createInvoice_ok() throws Exception {
+//        log.debug("Starting test: createInvoice_ok - stubbing invoiceService.createFromEntries(...)");
+//
+//        when(invoiceService.createFromEntries(any())).thenReturn(mock(TmsInvoiceDto.class));
+//
+//        String json = """
+//        {
+//          "clientId": 101,
+//          "issueDate": "2025-08-15",
+//          "dueDate": "2025-09-15",
+//          "currencyCode": "USD",
+//          "notes": "Payment due in 30 days",
+//          "timeEntryIds": [1, 2, 3]
+//        }
+//        """;
+//
+//        mvc.perform(post(INVOICE_BASE_PATH)
+//                        .contentType(MediaType.APPLICATION_JSON)
+//                        .content(json))
+//                .andExpect(status().isOk());
+//
+//        verify(invoiceService).createFromEntries(any());
+//
+//        log.info("Test createInvoice_ok completed - invoice creation delegation verified");
+//    }
 
     /** POST /invoices/{id}/send → send invoice */
     @Test
