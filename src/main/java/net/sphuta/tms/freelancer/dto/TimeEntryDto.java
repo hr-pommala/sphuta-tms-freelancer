@@ -19,7 +19,7 @@ public record TimeEntryDto(
 
         @NotNull(message = "Timesheet ID is required")
         @Schema(example = "101", description = "Target timesheet ID", accessMode = Schema.AccessMode.WRITE_ONLY)
-        Integer timesheetId,
+        int timesheetId,
 
         @NotNull(message = "Entry date is required")
         @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
@@ -43,7 +43,7 @@ public record TimeEntryDto(
         // -------- RESPONSE FIELDS --------
 
         @Schema(description = "Unique identifier of the time entry", example = "501", accessMode = Schema.AccessMode.READ_ONLY)
-        Integer id,
+        int id,
 
         @Schema(description = "Total cost calculated at entry (hours × rateAtEntry)", example = "260.00", accessMode = Schema.AccessMode.READ_ONLY)
         BigDecimal costAtEntry

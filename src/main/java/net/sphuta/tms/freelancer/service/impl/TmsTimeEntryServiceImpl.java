@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.OffsetTime;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Implementation of {@link TmsTimeEntryService}.
@@ -58,8 +59,8 @@ public class TmsTimeEntryServiceImpl implements TmsTimeEntryService {
      *
      * @param req the incoming {@link TimeEntryDto} request
      * @return a response DTO representing the created time entry
-     * @throws ApiExceptions.NotFoundException    if the timesheet does not exist
-     * @throws ApiExceptions.ConflictException   if the timesheet is locked
+     * @throws NotFoundException    if the timesheet does not exist
+     * @throws ConflictException   if the timesheet is locked
      * @throws ApiExceptions.ValidationException if hours or entry date are invalid
      */
     @Override
@@ -88,13 +89,15 @@ public class TmsTimeEntryServiceImpl implements TmsTimeEntryService {
         }
 
         // ✅ Validate hours > 0
-        if (req.hours() == null || req.hours().compareTo(BigDecimal.ZERO) <= 0) {
+        if (Optional.ofNullable(req.hours()).filter(h -> h.compareTo(BigDecimal.ZERO) > 0).isEmpty()) {
             log.warn("create time-entry: invalid hours={} for timesheet={}", req.hours(), t.getId());
             throw new ApiExceptions.ValidationException("hours must be > 0");
         }
 
         // ✅ Calculate cost (if rate is provided)
-        var cost = req.rateAtEntry() == null ? null : req.rateAtEntry().multiply(req.hours());
+        var cost = Optional.ofNullable(req.rateAtEntry())
+                .map(rate -> rate.multiply(req.hours()))
+                .orElse(null);
         log.debug("create time-entry: cost computed={} (hours={} x rate={})", cost, req.hours(), req.rateAtEntry());
 
         // ✅ Generate start and end times based on current timestamp and hours worked
@@ -134,11 +137,11 @@ public class TmsTimeEntryServiceImpl implements TmsTimeEntryService {
      * </ul>
      *
      * @param id the ID of the entry to delete
-     * @throws ApiExceptions.NotFoundException  if entry does not exist
-     * @throws ApiExceptions.ConflictException if entry is already invoiced
+     * @throws NotFoundException  if entry does not exist
+     * @throws ConflictException if entry is already invoiced
      */
     @Override
-    public void delete(Integer id) {
+    public void delete(int id) {
         log.info("delete time-entry: entryId={}", id);
 
         // ✅ Lookup entry by ID
@@ -148,7 +151,10 @@ public class TmsTimeEntryServiceImpl implements TmsTimeEntryService {
         });
 
         // ✅ Prevent deletion of invoiced entries
-        if (e.getDescription() != null && e.getDescription().toLowerCase().contains("[invoiced]")) {
+        if (Optional.ofNullable(e.getDescription())
+                .map(String::toLowerCase)
+                .filter(desc -> desc.contains("[invoiced]"))
+                .isPresent()) {
             log.warn("delete time-entry: invoiced entryId={}", id);
             throw new ConflictException("Time entry already invoiced; cannot delete");
         }
@@ -162,7 +168,6 @@ public class TmsTimeEntryServiceImpl implements TmsTimeEntryService {
      * Retrieve all time entries across all timesheets.
      */
     @Override
-    @Transactional(readOnly = true)
     public List<TimeEntryDto> getAll() {
         log.info("Service: fetching all time-entries");
 

@@ -16,6 +16,8 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.Operation;
 
+import java.util.List;
+
 /**
  * REST controller for managing Timesheets and Time Entries.
  * <p>
@@ -74,7 +76,7 @@ public class TmsTimesheetController {
      */
     @Operation(summary = "Get Timesheet", description = "Retrieve details of a specific timesheet by ID.")
     @GetMapping("/timesheets/{id}")
-    public ResponseEntity<TmsApiResponse<TmsTimesheetDto>> get(@PathVariable Integer id) {
+    public ResponseEntity<TmsApiResponse<TmsTimesheetDto>> get(@PathVariable int id) {
         log.info("GET /timesheets/{}", id);
 
         var data = tmsTimesheetService.get(id);
@@ -96,7 +98,7 @@ public class TmsTimesheetController {
     @Operation(summary = "Bulk Upsert Entries", description = "Insert, update, or delete multiple entries in a timesheet.")
     @PutMapping("/timesheets/{id}/entries")
     public ResponseEntity<TmsApiResponse<BulkUpsertDto>> bulkUpsert(
-            @PathVariable("id") Integer timesheetId,
+            @PathVariable("id") int timesheetId,
             @Valid @RequestBody BulkUpsertDto req) {
 
         log.info("PUT /timesheets/{}/entries rows={}",
@@ -118,7 +120,7 @@ public class TmsTimesheetController {
      */
     @Operation(summary = "Submit Timesheet", description = "Submit a timesheet for review and approval.")
     @PostMapping("/timesheets/{id}/submit")
-    public ResponseEntity<TmsApiResponse<TmsTimesheetDto>> submit(@PathVariable Integer id) {
+    public ResponseEntity<TmsApiResponse<TmsTimesheetDto>> submit(@PathVariable int id) {
         log.info("POST /timesheets/{}/submit", id);
 
         var data = tmsTimesheetService.submit(id);
@@ -126,24 +128,6 @@ public class TmsTimesheetController {
         log.debug("Timesheet {} submitted; status={}", id, data.status());
 
         return ResponseEntity.ok(TmsApiResponse.success(HttpStatus.OK, TmsMessages.TIMESHEET_SUBMITTED, data));
-    }
-
-    /**
-     * Lock a timesheet to prevent further modifications.
-     *
-     * @param id timesheet ID
-     * @return success message
-     */
-    @Operation(summary = "Lock Timesheet", description = "Lock a timesheet to prevent further modifications.")
-    @PatchMapping("/timesheets/{id}/lock")
-    public ResponseEntity<TmsApiResponse<String>> lock(@PathVariable Integer id) {
-        log.info("PATCH /timesheets/{}/lock", id);
-
-        tmsTimesheetService.lock(id);
-
-        log.debug("Timesheet {} locked", id);
-
-        return ResponseEntity.ok(TmsApiResponse.success(HttpStatus.OK, TmsMessages.TIMESHEET_LOCKED, "Timesheet locked"));
     }
 
     /**
@@ -176,7 +160,7 @@ public class TmsTimesheetController {
      */
     @Operation(summary = "Delete Time Entry", description = "Delete a specific time entry by its ID.")
     @DeleteMapping("/time-entries/{entryId}")
-    public ResponseEntity<TmsApiResponse<Void>> deleteEntry(@PathVariable("entryId") Integer entryId) {
+    public ResponseEntity<TmsApiResponse<Void>> deleteEntry(@PathVariable("entryId") int entryId) {
         log.info("DELETE /time-entries/{}", entryId);
 
         tmsTimeEntryService.delete(entryId);
@@ -213,7 +197,7 @@ public class TmsTimesheetController {
      */
     @Operation(summary = "Delete Timesheet", description = "Delete a timesheet and its associated entries by ID.")
     @DeleteMapping("/timesheets/{id}")
-    public ResponseEntity<TmsApiResponse<Void>> delete(@PathVariable Integer id) {
+    public ResponseEntity<TmsApiResponse<Void>> delete(@PathVariable int id) {
         log.info("DELETE /timesheets/{}", id);
 
         tmsTimesheetService.delete(id);
@@ -232,7 +216,7 @@ public class TmsTimesheetController {
      */
     @Operation(summary = "Get All Time Entries", description = "Retrieve all time entries across all timesheets.")
     @GetMapping("/time-entries")
-    public ResponseEntity<TmsApiResponse<java.util.List<TimeEntryDto>>> getAllTimeEntries() {
+    public ResponseEntity<TmsApiResponse<List<TimeEntryDto>>> getAllTimeEntries() {
         log.info("GET /time-entries");
 
         var data = tmsTimeEntryService.getAll();

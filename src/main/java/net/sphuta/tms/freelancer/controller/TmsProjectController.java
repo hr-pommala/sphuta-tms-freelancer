@@ -47,8 +47,7 @@ public class TmsProjectController {
 
     /* ============================================================
      * Section: Clients (used in Owner dropdowns for project creation)
-     * ============================================================
-     */
+     * ============================================================ */
 
     /**
      * Returns a paginated list of clients for the Owner dropdown.
@@ -89,8 +88,7 @@ public class TmsProjectController {
 
     /* ============================================================
      * Section: Projects CRUD (Create, Read, Update, Archive, Delete)
-     * ============================================================
-     */
+     * ============================================================ */
 
     /**
      * Lists projects with filters such as active/archived, by client, and search.
@@ -178,36 +176,10 @@ public class TmsProjectController {
 
         log.debug("PUT /projects/{} full update requested", id);
 
-        // Delegate to service with full update flag
-        var updated = service.updateProject(id, in, true);
+        // Delegate to service (PUT semantics)
+        var updated = service.updateProject(id, in);
 
         log.info("Project fully updated: id={}", id);
-
-        return TmsApiResponse.success(HttpStatus.OK, ApiMessageConstants.PROJECT_UPDATED, updated);
-    }
-
-    /**
-     * Performs partial update (PATCH) of a project by ID.
-     *
-     * @param id project identifier
-     * @param in project DTO with only fields to update
-     * @return standardized response with updated project DTO
-     */
-    @Operation(
-            summary = "Partial update (PATCH)",
-            description = "Updates only specific fields of a project without replacing the entire resource."
-    )
-    @PatchMapping("/projects/{id}")
-    public TmsApiResponse<TmsProjectDto> patch(
-            @PathVariable int id,
-            @RequestBody TmsProjectDto in) {
-
-        log.debug("PATCH /projects/{} partial update requested", id);
-
-        // Delegate to service with partial update flag
-        var updated = service.updateProject(id, in, false);
-
-        log.info("Project partially updated: id={}", id);
 
         return TmsApiResponse.success(HttpStatus.OK, ApiMessageConstants.PROJECT_UPDATED, updated);
     }

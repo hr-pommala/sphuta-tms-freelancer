@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 public record TmsUserDto(
 
         @Schema(description = "User ID (auto-incremented)", example = "101", accessMode = Schema.AccessMode.READ_ONLY)
-        Integer id,
+        int id,
 
         @NotBlank(message = "email is required")
         @Email(message = "email must be a valid email address")

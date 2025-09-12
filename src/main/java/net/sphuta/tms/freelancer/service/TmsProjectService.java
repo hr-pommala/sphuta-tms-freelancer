@@ -40,14 +40,13 @@ public interface TmsProjectService {
     TmsProjectDto createProject(TmsProjectDto in);
 
     /**
-     * Updates an existing project.
+     * Updates an existing project (PUT semantics — full replace).
      *
-     * @param id          project ID (int)
-     * @param in          DTO containing update payload
-     * @param fullReplace true for PUT (full replacement), false for PATCH (partial update)
+     * @param id project ID (int)
+     * @param in DTO containing update payload (all fields expected for a full replace)
      * @return updated project mapped to {@link TmsProjectDto}
      */
-    TmsProjectDto updateProject(int id, TmsProjectDto in, boolean fullReplace);
+    TmsProjectDto updateProject(int id, TmsProjectDto in);
 
     /**
      * Archives or unarchives a project.

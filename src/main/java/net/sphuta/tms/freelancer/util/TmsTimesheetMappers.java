@@ -110,10 +110,11 @@ public class TmsTimesheetMappers {
                             e.description(),
                             e.hours(),
                             e.rateAtEntry(),
-                            e.id() != null ? e.id() : -1, // fallback to -1 if id is null
-                            (e.rateAtEntry() != null && e.hours() != null)
-                                    ? e.rateAtEntry().multiply(e.hours()) // recalc cost if possible
-                                    : e.costAtEntry()
+                            Optional.ofNullable(e.id()).orElse(-1), // fallback to -1 if id is null
+                            Optional.ofNullable(e.rateAtEntry())
+                                    .filter(rate -> e.hours() != null)
+                                    .map(rate -> rate.multiply(e.hours()))
+                                    .orElse(e.costAtEntry())
                     );
 
                     log.trace("Mapped safe entry DTO: {}", dto);
@@ -137,26 +138,18 @@ public class TmsTimesheetMappers {
 
     /** Map list of TimesheetEntity -> List<TmsTimesheetDto> */
     public static List<TmsTimesheetDto> toTimesheetResponseList(List<TimesheetEntity> entities) {
-        if (entities == null || entities.isEmpty()) {
-            return Collections.emptyList();
-        }
-        var timesheetList = entities.stream()
-                .map(TmsTimesheetMappers::toDetail)
-                .toList();
-        return timesheetList;
+        return Optional.ofNullable(entities)
+                .filter(e -> !e.isEmpty())
+                .map(list -> list.stream().map(TmsTimesheetMappers::toDetail).toList())
+                .orElse(Collections.emptyList());
     }
 
     /** Map list of TimeEntryEntity -> List<TimeEntryDto> */
     public static List<TimeEntryDto> toEntryResponseList(List<TimeEntryEntity> entities) {
-        if (entities == null || entities.isEmpty()) {
-            return Collections.emptyList();
-        }
-        var entryList = entities.stream()
-                .map(TmsTimesheetMappers::toEntryResponse)
-                .toList();
-        return entryList;
+        return Optional.ofNullable(entities)
+                .filter(e -> !e.isEmpty())
+                .map(list -> list.stream().map(TmsTimesheetMappers::toEntryResponse).toList())
+                .orElse(Collections.emptyList());
     }
 
 }
-
-

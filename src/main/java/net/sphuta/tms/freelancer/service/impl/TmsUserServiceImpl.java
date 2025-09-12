@@ -36,7 +36,7 @@ public class TmsUserServiceImpl implements TmsUserService {
     }
 
     @Override
-    public TmsUserDto getUserById(Integer id) {
+    public TmsUserDto getUserById(int id) {
         log.info("Fetching user with ID {}", id);
 
         return tmsUserRepository.findById(id)
@@ -59,7 +59,7 @@ public class TmsUserServiceImpl implements TmsUserService {
     }
 
     @Override
-    public TmsUserDto updateUser(Integer id, TmsUserDto request) {
+    public TmsUserDto updateUser(int id, TmsUserDto request) {
         log.info("Updating user with ID {}", id);
 
         var user = tmsUserRepository.findById(id)
@@ -68,19 +68,9 @@ public class TmsUserServiceImpl implements TmsUserService {
                     return new NotFoundException("User not existed with this id: " + id);
                 });
 
-        // Update full set of fields
-        user.setEmail(request.email());
-        if (request.passwordHash() != null) user.setPasswordHash(request.passwordHash());
-        user.setFullName(request.fullName());
-        user.setPhone(request.phone());
-        user.setStatus(request.status());
-        user.setEmailVerified(request.emailVerified() != null ? request.emailVerified() : user.isEmailVerified());
-        user.setTimezone(request.timezone());
-        user.setLocale(request.locale());
-        user.setCurrency(request.currency());
-        user.setAvatarUrl(request.avatarUrl());
-        user.setIsActive(request.isActive() != null ? request.isActive() : user.getIsActive());
-        user.setUpdatedAt(LocalDateTime.now());
+        // Update full set of fields using mapper
+        TmsUserMapper.updateEntityFromDto(request, user);
+        user.setUpdateDt(LocalDateTime.now());
 
         var updated = tmsUserRepository.save(user);
         log.debug("User updated successfully with ID {}", updated.getId());
@@ -89,37 +79,7 @@ public class TmsUserServiceImpl implements TmsUserService {
     }
 
     @Override
-    public TmsUserDto partialUpdateUser(Integer id, TmsUserDto request) {
-        log.info("Partially updating user with ID {}", id);
-
-        var user = tmsUserRepository.findById(id)
-                .orElseThrow(() -> {
-                    log.error("User not found with ID {}", id);
-                    return new NotFoundException("User not existed with this id: " + id);
-                });
-
-        if (request.email() != null) user.setEmail(request.email());
-        if (request.passwordHash() != null) user.setPasswordHash(request.passwordHash());
-        if (request.fullName() != null) user.setFullName(request.fullName());
-        if (request.phone() != null) user.setPhone(request.phone());
-        if (request.status() != null) user.setStatus(request.status());
-        if (request.emailVerified() != null) user.setEmailVerified(request.emailVerified());
-        if (request.timezone() != null) user.setTimezone(request.timezone());
-        if (request.locale() != null) user.setLocale(request.locale());
-        if (request.currency() != null) user.setCurrency(request.currency());
-        if (request.avatarUrl() != null) user.setAvatarUrl(request.avatarUrl());
-        if (request.isActive() != null) user.setIsActive(request.isActive());
-
-        user.setUpdatedAt(LocalDateTime.now());
-
-        var updated = tmsUserRepository.save(user);
-        log.debug("Partial update completed for user ID {}", updated.getId());
-
-        return TmsUserMapper.toResponse(updated);
-    }
-
-    @Override
-    public void deleteUser(Integer id) {
+    public void deleteUser(int id) {
         log.info("Deleting user with ID {}", id);
 
         var user = tmsUserRepository.findById(id)

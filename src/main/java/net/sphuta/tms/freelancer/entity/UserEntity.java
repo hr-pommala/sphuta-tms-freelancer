@@ -23,7 +23,7 @@ public class UserEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    private int id;
 
     @Email(message = "Email must be valid")
     @NotBlank(message = "Email is mandatory")
@@ -73,23 +73,23 @@ public class UserEntity {
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
 
-    @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
+    @Column(name = "created_dt", nullable = false)
+    private LocalDateTime createdDt;
 
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
+    @Column(name = "updated_dt")
+    private LocalDateTime updateDt;
 
-    @Column(name = "deleted_at")
-    private LocalDateTime deletedAt;
+    @Column(name = "deleted_dt")
+    private LocalDateTime deletedDt;
 
     @PrePersist
     protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
+        this.createdDt = LocalDateTime.now();
         if (this.isActive == null) this.isActive = true;
     }
 
     @PreUpdate
     protected void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
+        this.updateDt = LocalDateTime.now();
     }
 }

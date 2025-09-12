@@ -26,7 +26,7 @@ public interface TmsTimeEntryService {
      *
      * @param id the unique identifier of the time entry to delete
      */
-    void delete(Integer id);
+    void delete(int id);
 
     /**
      * Retrieve all time entries across all timesheets.

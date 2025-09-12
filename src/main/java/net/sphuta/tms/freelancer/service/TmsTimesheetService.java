@@ -23,7 +23,7 @@ public interface TmsTimesheetService {
      * @param id unique identifier of the timesheet
      * @return {@link TmsTimesheetDto} containing the timesheet details
      */
-    TmsTimesheetDto get(Integer id);
+    TmsTimesheetDto get(int id);
 
     /**
      * Submits a timesheet for approval.
@@ -31,7 +31,7 @@ public interface TmsTimesheetService {
      * @param id unique identifier of the timesheet
      * @return {@link TmsTimesheetDto} with updated status after submission
      */
-    TmsTimesheetDto submit(Integer id);
+    TmsTimesheetDto submit(int id);
 
     /**
      * Bulk upsert operation for time entries of a timesheet.
@@ -40,14 +40,7 @@ public interface TmsTimesheetService {
      * @param req {@link BulkUpsertDto} containing multiple entries to insert or update
      * @return {@link BulkUpsertDto} with the results of the bulk operation
      */
-    BulkUpsertDto bulkUpsert(Integer timesheetId, BulkUpsertDto req);
-
-    /**
-     * Locks a timesheet to prevent further modifications.
-     *
-     * @param id unique identifier of the timesheet
-     */
-    void lock(Integer id);
+    BulkUpsertDto bulkUpsert(int timesheetId, BulkUpsertDto req);
 
     /**
      * Retrieve all timesheets (non-paged).
@@ -65,6 +58,6 @@ public interface TmsTimesheetService {
      *
      * @param id unique identifier of the timesheet
      */
-    void delete(Integer id);
+    void delete(int id);
 
 }

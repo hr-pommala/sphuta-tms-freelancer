@@ -96,27 +96,10 @@ public class TmsUserController {
             @ApiResponse(responseCode = "404", description = "User not found")
     })
     public TmsApiResponse<TmsUserDto> updateUser(@PathVariable Integer id,
-                                                      @Valid @RequestBody TmsUserDto request) {
+                                                 @Valid @RequestBody TmsUserDto request) {
         log.info("PUT /api/users/{} called", id);
         var updatedUser = tmsUserService.updateUser(id, request);
         return TmsResponseUtil.success(messagesConfig.getUser().get("update"), updatedUser);
-    }
-
-    /**
-     * Partial update of an existing user.
-     */
-    @PatchMapping("/{id}")
-    @Operation(summary = "Partially update a user",
-            description = "Updates only provided fields of an existing user. Returns 404 if user not found.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "User partially updated successfully"),
-            @ApiResponse(responseCode = "404", description = "User not found")
-    })
-    public TmsApiResponse<TmsUserDto> partialUpdateUser(@PathVariable Integer id,
-                                                             @RequestBody TmsUserDto request) {
-        log.info("PATCH /api/users/{} called", id);
-        var partiallyUpdatedUser = tmsUserService.partialUpdateUser(id, request);
-        return TmsResponseUtil.success(messagesConfig.getUser().get("partial-update"), partiallyUpdatedUser);
     }
 
     /**

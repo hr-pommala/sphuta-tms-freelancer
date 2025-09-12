@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Implementation of {@link TmsTimesheetService} for managing Timesheets.
@@ -69,7 +70,7 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
         }
 
         // NEW: verify project exists (throw if not)
-        if (req.projectId() == null || !projectRepository.existsById(req.projectId())) {
+        if (Optional.ofNullable(req.projectId()).filter(projectRepository::existsById).isEmpty()) {
             log.error("Project not found: projectId={}", req.projectId());
             throw new NotFoundException("Project not found");
         }
@@ -104,8 +105,7 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
      * @return {@link TmsTimesheetDto} with entries and totals
      */
     @Override
-    @Transactional(readOnly = true)
-    public TmsTimesheetDto get(Integer id) {
+    public TmsTimesheetDto get(int id) {
         log.info("Fetching timesheet by id={}", id);
 
         var t = timesheetRepo.findById(id)
@@ -129,7 +129,7 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
      * @return updated {@link TmsTimesheetDto} with APPROVED status
      */
     @Override
-    public TmsTimesheetDto submit(Integer id) {
+    public TmsTimesheetDto submit(int id) {
         log.info("Submitting timesheet id={} for approval", id);
 
         var t = timesheetRepo.findById(id)
@@ -160,12 +160,12 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
      * @return {@link BulkUpsertDto} containing inserted/updated counts and processed entries
      */
     @Override
-    public BulkUpsertDto bulkUpsert(Integer timesheetId, BulkUpsertDto req) {
+    public BulkUpsertDto bulkUpsert(int timesheetId, BulkUpsertDto req) {
         log.info("Bulk upsert requested: timesheetId={}, rows={}",
                 timesheetId, (req.entries() == null ? 0 : req.entries().size()));
 
         // If request has no entries, log and return an empty response
-        if (req.entries() == null || req.entries().isEmpty()) {
+        if (Optional.ofNullable(req.entries()).filter(entries -> !entries.isEmpty()).isEmpty()) {
             log.warn("No entries provided for bulk upsert");
             return TmsTimesheetMappers.toBulkUpsertResponse(List.of(), req.mode(), 0, 0, 0, BigDecimal.ZERO);
         }
@@ -199,7 +199,7 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
             }
 
             // Validation: hours must be > 0
-            if (r.hours() == null || r.hours().compareTo(BigDecimal.ZERO) <= 0) {
+            if (Optional.ofNullable(r.hours()).filter(h -> h.compareTo(BigDecimal.ZERO) > 0).isEmpty()) {
                 log.warn("Validation failed: entry with invalid hours. entry={}", r);
                 throw new ApiExceptions.ValidationException("Some entries invalid: hours must be > 0");
             }
@@ -208,7 +208,7 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
             var existing = entryRepo.findByTimesheetAndEntryDateAndDescription(
                     t, r.entryDate(), r.description()).orElse(null);
 
-            if (existing == null) {
+            if (Optional.ofNullable(existing).isEmpty()) {
                 // INSERT path
                 var e = buildEntryFromReq(t, r);
                 entryRepo.save(e);
@@ -221,7 +221,7 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
                 // UPDATE path
                 existing.setHours(r.hours());
                 existing.setRateAtEntry(r.rateAtEntry());
-                existing.setCostAtEntry(r.rateAtEntry() == null ? null : r.rateAtEntry().multiply(r.hours()));
+                existing.setCostAtEntry(Optional.ofNullable(r.rateAtEntry()).map(rate -> rate.multiply(r.hours())).orElse(null));
                 updated++;
                 processed.add(TmsTimesheetMappers.toTimeEntryDto(existing));
                 log.info("Updated existing entry: id={}, date={}, desc='{}', newHours={}, newRate={}",
@@ -250,7 +250,7 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
      * @return populated {@link TimeEntryEntity}
      */
     private TimeEntryEntity buildEntryFromReq(TimesheetEntity t, TimeEntryDto r) {
-        var cost = r.rateAtEntry() == null ? null : r.rateAtEntry().multiply(r.hours());
+        var cost = Optional.ofNullable(r.rateAtEntry()).map(rate -> rate.multiply(r.hours())).orElse(null);
         var entry = TimeEntryEntity.builder()
                 .timesheet(t)
                 .entryDate(r.entryDate())
@@ -266,31 +266,11 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
     }
 
     /**
-     * Lock a timesheet to prevent modifications.
-     *
-     * @param id timesheet identifier
-     */
-    @Override
-    public void lock(Integer id) {
-        log.info("Locking timesheet id={}", id);
-
-        var t = timesheetRepo.findById(id)
-                .orElseThrow(() -> {
-                    log.error("Timesheet not found during lock: id={}", id);
-                    return new NotFoundException("Timesheet not found");
-                });
-
-        t.setStatus(TimesheetStatus.LOCKED);
-        log.info("Timesheet locked successfully: id={}", id);
-    }
-
-    /**
      * Retrieve all timesheets (non-paged).
      *
      * Maps TimesheetEntity -> TmsTimesheetDto using TmsTimesheetMappers.toDetail.
      */
     @Override
-    @Transactional(readOnly = true)
     public List<TmsTimesheetDto> getAll() {
         log.info("Service: fetching all timesheets");
 
@@ -312,7 +292,7 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
      * - Delete the timesheet entity.
      */
     @Override
-    public void delete(Integer id) {
+    public void delete(int id) {
         log.info("Service: deleting timesheet id={}", id);
 
         var ts = timesheetRepo.findById(id).orElseThrow(() -> {
@@ -322,15 +302,13 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
 
         // Defensive: delete entries belonging to this timesheet explicitly (avoids FK constraint issues if cascade not configured)
         var entries = ts.getEntries();
-        if (entries != null && !entries.isEmpty()) {
-            log.debug("Service: deleting {} entries for timesheet id={}", entries.size(), id);
-
-            // Use repository bulk delete for performance (deleteAll accepts a collection)
-            entryRepo.deleteAll(entries);
-
-            // Clear entries from the entity to keep persistence context consistent
-            ts.getEntries().clear();
-        }
+        Optional.ofNullable(entries)
+                .filter(e -> !e.isEmpty())
+                .ifPresent(e -> {
+                    log.debug("Service: deleting {} entries for timesheet id={}", e.size(), id);
+                    entryRepo.deleteAll(e);
+                    ts.getEntries().clear();
+                });
 
         // Now delete the timesheet
         timesheetRepo.delete(ts);
@@ -339,5 +317,3 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
     }
 
 }
-
-

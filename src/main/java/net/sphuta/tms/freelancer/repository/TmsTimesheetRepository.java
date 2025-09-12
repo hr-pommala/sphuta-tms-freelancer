@@ -32,7 +32,7 @@ public interface TmsTimesheetRepository extends JpaRepository<TimesheetEntity, I
      * @param pe end date of the period
      * @return an {@link Optional} containing the timesheet if found
      */
-    Optional<TimesheetEntity> findByProjectIdAndPeriodStartAndPeriodEnd(Integer projectId, LocalDate ps, LocalDate pe);
+    Optional<TimesheetEntity> findByProjectIdAndPeriodStartAndPeriodEnd(int projectId, LocalDate ps, LocalDate pe);
 
 
     /**
@@ -44,7 +44,7 @@ public interface TmsTimesheetRepository extends JpaRepository<TimesheetEntity, I
      * @param pageable pagination details
      * @return a {@link Page} of timesheets belonging to the project
      */
-    Page<TimesheetEntity> findByProjectId(Integer projectId, Pageable pageable);
+    Page<TimesheetEntity> findByProjectId(int projectId, Pageable pageable);
 
     /**
      * Finds all timesheets by their status.

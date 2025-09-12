@@ -72,7 +72,7 @@ public final class ApiMessageConstants {
     /** Message used when a new project is successfully created. */
     public static final String PROJECT_CREATED = "Project created successfully";
 
-    /** Message used when a project is fully/partially updated. */
+    /** Message used when a project is updated. */
     public static final String PROJECT_UPDATED = "Project updated successfully";
 
     /** Message used when a project is archived (active → false). */

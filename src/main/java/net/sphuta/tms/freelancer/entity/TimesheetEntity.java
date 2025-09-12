@@ -39,13 +39,13 @@ public class TimesheetEntity {
      */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)   // Auto-increment int PK
-    private Integer id;
+    private int id;
 
     /**
      * ID of the project this timesheet belongs to.
      */
     @Column(name = "project_id", nullable = false)
-    private Integer projectId;
+    private int projectId;
 
     /**
      * Start date of the timesheet period.

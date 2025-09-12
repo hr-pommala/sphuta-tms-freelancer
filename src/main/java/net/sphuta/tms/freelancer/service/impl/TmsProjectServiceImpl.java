@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.format.DateTimeFormatter;
+import java.util.Optional;
 
 /**
  * Implementation of {@link TmsProjectService}.
@@ -103,7 +104,8 @@ public class TmsProjectServiceImpl implements TmsProjectService {
                 .orElseThrow(() -> new NotFoundException("Client not found"));
 
         // Date validation (only one rule: endDate must not be before startDate)
-        if (in.startDate() != null && in.endDate() != null
+        if (Optional.ofNullable(in.startDate()).isPresent()
+                && Optional.ofNullable(in.endDate()).isPresent()
                 && in.endDate().isBefore(in.startDate())) {
             throw new ConflictException("End date cannot be before start date");
         }
@@ -115,11 +117,14 @@ public class TmsProjectServiceImpl implements TmsProjectService {
         }
 
         // Enforce uniqueness of project code (if provided) per client
-        if (in.code() != null && !in.code().isBlank()
-                && projects.existsByClientEntity_IdAndCodeIgnoreCase(client.getId(), in.code())) {
-            log.warn("createProject conflict: duplicate code per client");
-            throw new ConflictException("Duplicate code for this client");
-        }
+        Optional.ofNullable(in.code())
+                .filter(code -> !code.isBlank())
+                .ifPresent(code -> {
+                    if (projects.existsByClientEntity_IdAndCodeIgnoreCase(client.getId(), code)) {
+                        log.warn("createProject conflict: duplicate code per client");
+                        throw new ConflictException("Duplicate code for this client");
+                    }
+                });
 
         // Build and initialize project entity with provided DTO data
         var entity = ProjectEntity.builder()
@@ -142,49 +147,31 @@ public class TmsProjectServiceImpl implements TmsProjectService {
     /**
      * Update a project by ID.
      *
-     * @param id          project identifier
-     * @param in          updated project DTO
-     * @param fullReplace true if PUT (replace all fields), false if PATCH (update only non-null fields)
+     * This method performs a full replace of the project's fields (behaves like HTTP PUT).
+     *
+     * @param id project identifier
+     * @param in updated project DTO (all fields expected to be set for a full replace)
      * @return updated {@link TmsProjectDto}
      * @throws NotFoundException if project or client not found
      */
     @Override
-    public TmsProjectDto updateProject(int id, TmsProjectDto in, boolean fullReplace) {
-        log.debug("updateProject(id={}, fullReplace={})", id, fullReplace);
+    public TmsProjectDto updateProject(int id, TmsProjectDto in) {
+        log.debug("updateProject(id={})", id);
 
         // Ensure the project exists before updating
         var project = projects.findById(id)
                 .orElseThrow(() -> new NotFoundException("Project not found"));
 
-        if (fullReplace) {
-            // PUT: Replace all fields with new values
-            project.setClientEntity(clients.findById(in.clientId())
-                    .orElseThrow(() -> new NotFoundException("Client not found")));
-            project.setName(in.projectName());
-            project.setCode(in.code());
-            project.setHourlyRate(in.hourlyRate());
-            project.setStartDate(in.startDate());
-            project.setEndDate(in.endDate());
-            project.setDescription(in.description());
-            project.setActive(Boolean.TRUE.equals(in.isActive()));
-        } else {
-            // PATCH: Update only provided non-null fields
-            if (in.clientId() != null) {
-                project.setClientEntity(clients.findById(in.clientId())
-                        .orElseThrow(() -> new NotFoundException("Client not found")));
-            }
-            if (in.projectName() != null) project.setName(in.projectName());
-            if (in.code() != null) project.setCode(in.code());
-            if (in.hourlyRate() != null) project.setHourlyRate(in.hourlyRate());
-            if (in.startDate() != null) project.setStartDate(in.startDate());
-            if (in.endDate() != null) project.setEndDate(in.endDate());
-            if (in.description() != null) project.setDescription(in.description());
-            if (in.isActive() != null) project.setActive(in.isActive());
-        }
+        // Resolve client entity if needed
+        var client = clients.findById(in.clientId())
+                .orElseThrow(() -> new NotFoundException("Client not found"));
 
+        // Delegate field updates to mapper
+        TmsProjectMapper.applyUpdate(project, in, client);
 
-        // Date validation (same rule as create): endDate must not be before startDate
-        if (project.getStartDate() != null && project.getEndDate() != null
+        // Date validation (same rule as create)
+        if (Optional.ofNullable(project.getStartDate()).isPresent()
+                && Optional.ofNullable(project.getEndDate()).isPresent()
                 && project.getEndDate().isBefore(project.getStartDate())) {
             log.warn("updateProject conflict: endDate is before startDate for project id={}", id);
             throw new ConflictException("End date cannot be before start date");
@@ -192,7 +179,7 @@ public class TmsProjectServiceImpl implements TmsProjectService {
 
         // Persist updated project
         var saved = projects.save(project);
-        log.info("Project {} updated: id={}", fullReplace ? "fully" : "partially", saved.getId());
+        log.info("Project updated: id={}", saved.getId());
         return TmsProjectMapper.toProjectDto(saved);
     }
 
@@ -261,17 +248,19 @@ public class TmsProjectServiceImpl implements TmsProjectService {
         // Pageable sorted by project name
         var pageable = PageRequest.of(page, size, Sort.by("name").ascending());
 
-        Page<ProjectEntity> p;
-        // Apply filters based on clientId and search term combinations
-        if (clientId != null && search != null && !search.isBlank()) {
-            p = projects.searchByActiveAndClientAndTerm(active, clientId, search, pageable);
-        } else if (clientId != null) {
-            p = projects.findByActiveAndClientEntity_Id(active, clientId, pageable);
-        } else if (search != null && !search.isBlank()) {
-            p = projects.searchByActiveAndTerm(active, search, pageable);
-        } else {
-            p = projects.findByActive(active, pageable);
-        }
+        // Apply filters with Optional to avoid null checks
+        Page<ProjectEntity> p =
+                Optional.ofNullable(clientId).map(cid ->
+                        Optional.ofNullable(search)
+                                .filter(s -> !s.isBlank())
+                                .map(s -> projects.searchByActiveAndClientAndTerm(active, cid, s, pageable))
+                                .orElseGet(() -> projects.findByActiveAndClientEntity_Id(active, cid, pageable))
+                ).orElseGet(() ->
+                        Optional.ofNullable(search)
+                                .filter(s -> !s.isBlank())
+                                .map(s -> projects.searchByActiveAndTerm(active, s, pageable))
+                                .orElseGet(() -> projects.findByActive(active, pageable))
+                );
 
         // Map to DTOs
         var result = p.map(TmsProjectMapper::toProjectDto);
@@ -279,6 +268,7 @@ public class TmsProjectServiceImpl implements TmsProjectService {
                 result.getTotalElements(), result.getTotalPages(), result.getNumber());
         return result;
     }
+
 
     /* ------------ helpers ------------ */
 

@@ -22,7 +22,7 @@ import java.time.format.DateTimeFormatter;
  *   <li>Convert {@link ClientEntity} → {@link TmsClientDto}</li>
  *   <li>Convert {@link ProjectEntity} → {@link TmsProjectDto}</li>
  *   <li>Build {@link ProjectEntity} from {@link TmsProjectDto} when creating projects</li>
- *   <li>Apply partial updates from {@link TmsProjectDto} into {@link ProjectEntity}</li>
+ *   <li>Apply full updates from {@link TmsProjectDto} into {@link ProjectEntity} (PUT semantics)</li>
  * </ul>
  */
 @Slf4j
@@ -38,7 +38,7 @@ public final class TmsProjectMapper {
      * Maps a {@link ClientEntity} to a {@link TmsClientDto}.
      * <p>
      * - Builds a slim DTO with only id and name fields.
-
+     *
      * - Prefers companyName as the display name. If absent, uses firstName + lastName.
      *
      * @param e Client entity to map
@@ -69,7 +69,7 @@ public final class TmsProjectMapper {
      * Maps a {@link ProjectEntity} to a {@link TmsProjectDto}.
      * <p>
      * - Embeds a slim {@link TmsClientDto} inside the project DTO.
-
+     *
      * - Formats created/updated timestamps using {@link #FORMATTER}.
      *
      * @param e Project entity to map
@@ -123,39 +123,39 @@ public final class TmsProjectMapper {
                 .build();
     }
 
-    /* ---------- Project: DTO (update) → Entity ---------- */
+    /* ---------- Project: DTO (update) → Entity (PUT semantics) ---------- */
 
     /**
-     * Applies updates from {@link TmsProjectDto} into an existing {@link ProjectEntity}.
+     * Applies a full replace from {@link TmsProjectDto} into an existing {@link ProjectEntity}.
      * <p>
-     * - Supports partial updates (only non-null fields are applied).
-
-     * - If client changes, applies the new {@link ClientEntity}.
+     * - Behaves like HTTP PUT: all fields from the DTO are applied to the target entity.
+     * - If {@code clientIfChanged} is non-null it will be set as the project's client; otherwise
+     *   the existing client on the target is preserved (service layer is expected to resolve client).
      *
-     * @param target the entity being updated
-     * @param dto DTO containing new values
+     * @param target the entity being updated (must not be null)
+     * @param dto DTO containing values to replace the entity's fields
      * @param clientIfChanged new client entity (if reassigned), else {@code null}
      */
     public static void applyUpdate(ProjectEntity target, TmsProjectDto dto, ClientEntity clientIfChanged) {
         if (dto == null || target == null) return;
 
-        log.debug("Applying updates from TmsProjectDto -> ProjectEntity (id={})", target.getId());
+        log.debug("Applying full update from TmsProjectDto -> ProjectEntity (id={})", target.getId());
 
-        // Reassign client if changed
+        // Replace client if provided (service layer typically resolves and passes non-null when client changes)
         if (clientIfChanged != null) {
-            log.debug("Updating client for project id={}", target.getId());
+            log.debug("Setting new client for project id={}", target.getId());
             target.setClientEntity(clientIfChanged);
         }
 
-        // Patch only non-null fields
-        if (dto.projectName() != null) target.setName(dto.projectName());
-        if (dto.code() != null) target.setCode(dto.code());
-        if (dto.hourlyRate() != null) target.setHourlyRate(dto.hourlyRate());
-        if (dto.startDate() != null) target.setStartDate(dto.startDate());
-        if (dto.endDate() != null) target.setEndDate(dto.endDate());
-        if (dto.description() != null) target.setDescription(dto.description());
-        if (dto.isActive() != null) target.setActive(Boolean.TRUE.equals(dto.isActive()));
+        // Full field replace (PUT semantics) - set fields directly from DTO
+        target.setName(dto.projectName());
+        target.setCode(dto.code());
+        target.setHourlyRate(dto.hourlyRate());
+        target.setStartDate(dto.startDate());
+        target.setEndDate(dto.endDate());
+        target.setDescription(dto.description());
+        target.setActive(Boolean.TRUE.equals(dto.isActive()));
 
-        log.debug("Update applied successfully for project id={}", target.getId());
+        log.debug("Full update applied successfully for project id={}", target.getId());
     }
 }

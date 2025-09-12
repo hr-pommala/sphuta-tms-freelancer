@@ -175,7 +175,7 @@ class TmsProjectControllerTest {
         var created = sampleProjectDto(201, true);
 
         var requestBody = new TmsProjectDto(
-                null, // id (create)
+                0, // id (primitive) - use 0 for create instead of null
                 null, // client (server fills for response)
                 1,
                 "Backend API",
@@ -215,10 +215,15 @@ class TmsProjectControllerTest {
         // Expected response after update
         var updated = new TmsProjectDto(
                 id,
-                new TmsClientDto(1, "Acme LLC",null, null, null, null,
-                        null, null, null, null, null, null,
-                        null, null, null, null, null, null,
-                        null, null, null, null, null),
+                // fixed: use builder for TmsClientDto to avoid canonical-ctor mismatch
+                TmsClientDto.builder()
+                        .id(1)
+                        .userId(1)
+                        .email(null)
+                        .companyName("Acme LLC")
+                        .firstName(null)
+                        .lastName(null)
+                        .build(),
                 1,
                 "Backend API v2",
                 "ACME-BE",
@@ -247,7 +252,8 @@ class TmsProjectControllerTest {
                 null
         );
 
-        Mockito.when(service.updateProject(eq(id), Mockito.any(TmsProjectDto.class), eq(true)))
+        // Updated to match new service signature (no boolean flag)
+        Mockito.when(service.updateProject(eq(id), Mockito.any(TmsProjectDto.class)))
                 .thenReturn(updated);
 
         mvc.perform(put("/api/v1/projects/projects/{id}", id)
@@ -257,56 +263,6 @@ class TmsProjectControllerTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value(ApiMessageConstants.PROJECT_UPDATED))
                 .andExpect(jsonPath("$.data.projectName").value("Backend API v2"));
-    }
-
-    /**
-     * Test: PATCH /api/v1/projects/{id}
-     * Scenario: Partially updates project (e.g., description only).
-     */
-    @Test
-    @DisplayName("PATCH /api/v1/projects/{id} partially updates a project")
-    void patch_ok() throws Exception {
-        int id = 302;
-
-        // Expected response after patch
-        var patched = new TmsProjectDto(
-                id,
-                new TmsClientDto(1, "Acme LLC",null, null, null, null,
-                        null, null, null, null, null, null,
-                        null, null, null, null, null, null,
-                        null, null, null, null, null),
-                1,
-                "Backend API",
-                "ACME-BE",
-                new BigDecimal("65.00"),
-                LocalDate.of(2025, 9, 1),
-                LocalDate.of(2025, 9, 30),
-                "Phase 2",
-                true,
-                "2025-08-25T18:20:00Z",
-                "2025-08-25T18:20:00Z"
-        );
-
-        // Partial request body
-        var patchBody = new TmsProjectDto(
-                null, null, null,
-                null, null, null,
-                null, null,
-                "Phase 2",
-                null,
-                null, null
-        );
-
-        Mockito.when(service.updateProject(eq(id), Mockito.any(TmsProjectDto.class), eq(false)))
-                .thenReturn(patched);
-
-        mvc.perform(patch("/api/v1/projects/projects/{id}", id)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(om.writeValueAsString(patchBody)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.message").value(ApiMessageConstants.PROJECT_UPDATED))
-                .andExpect(jsonPath("$.data.description").value("Phase 2"));
     }
 
     /**
@@ -378,12 +334,16 @@ class TmsProjectControllerTest {
      * @return sample DTO instance
      */
     private TmsProjectDto sampleProjectDto(Integer id, boolean isActive) {
-        var client = new TmsClientDto(1, "Acme LLC",null, null, null, null,
-                null, null, null, null, null, null,
-                null, null, null, null, null, null,
-                null, null, null, null, null);
+        var client = TmsClientDto.builder()
+                .id(1)
+                .userId(1)
+                .email(null)
+                .companyName("Acme LLC")
+                .firstName(null)
+                .lastName(null)
+                .build();
         return new TmsProjectDto(
-                id,
+                id != null ? id : 0,
                 client,
                 client.id(),
                 "Backend API",
