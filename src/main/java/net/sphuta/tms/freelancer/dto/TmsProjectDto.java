@@ -65,6 +65,7 @@ public record TmsProjectDto(
         /** Timestamp when record was last updated (response only). */
         @Schema(accessMode = Schema.AccessMode.READ_ONLY)
         String updatedDt
+
 ) {
     /** Validation groups. */
     public interface Create {}
