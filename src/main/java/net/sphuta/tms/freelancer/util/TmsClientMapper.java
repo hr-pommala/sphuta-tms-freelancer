@@ -1,80 +1,139 @@
 package net.sphuta.tms.freelancer.util;
 
+import lombok.extern.slf4j.Slf4j;
 import net.sphuta.tms.freelancer.dto.TmsClientDto;
 import net.sphuta.tms.freelancer.entity.ClientEntity;
 
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.Optional;
+
 /**
  * ==========================================================
- * TmsClientMapper
+ * {@code TmsClientMapper}
  * ==========================================================
  *
- * Utility class for converting between:
- * - {@link TmsClientDto} (incoming API payloads),
- * - {@link ClientEntity} (JPA persistence model),
- * - {@link TmsClientDto} (outgoing API response).
+ * <p>Utility class responsible for mapping between the domain {@link ClientEntity}
+ * and the transport {@link TmsClientDto} (both directions).</p>
  *
- * Responsibilities:
- * - Ensure consistent mapping between DTOs and entities.
- * - Apply sensible defaults for new entities.
- * - Support partial updates by merging only non-null fields.
- *
- * Design notes:
- * - Pure utility methods (static).
- * - No logging inside mapper (responsibility of services).
+ * <p><b>Design notes:</b></p>
+ * <ul>
+ *   <li>All methods are static — this is a stateless mapper.</li>
+ *   <li>Includes defensive null checks and SLF4J logging for observability.</li>
+ *   <li>Private constructor prevents instantiation.</li>
+ * </ul>
  */
-public class TmsClientMapper {
+@Slf4j
+public final class TmsClientMapper {
+
+    // prevent instantiation
+    private TmsClientMapper() {}
+
+    // ------------------------------------------------------------------------
+    // TO ENTITY (CREATE)
+    // ------------------------------------------------------------------------
 
     /**
-     * Builds a **new entity** from a request payload.
-     * - Applies defaults for booleans and active status.
+     * Create a new {@link ClientEntity} populated from {@link TmsClientDto}.
      *
-     * @param r request DTO
-     * @return new entity ready to be persisted
+     * <p>Behavior:</p>
+     * <ul>
+     *   <li>Applies common fields (name, contact, address).</li>
+     *   <li>Sets boolean flags with sensible defaults (true/false handling).</li>
+     * </ul>
+     *
+     * @param r DTO source (must not be null)
+     * @return a new ClientEntity instance ready for persistence
+     * @throws IllegalArgumentException if {@code r} is null
      */
     public static ClientEntity toNewEntity(TmsClientDto r) {
+        if (r == null) {
+            log.error("toNewEntity called with null TmsClientDto");
+            throw new IllegalArgumentException("TmsClientDto must not be null");
+        }
+
+        log.debug("Mapping TmsClientDto -> ClientEntity (new). email={}", r.email());
+
         ClientEntity e = new ClientEntity();
         applyCommonFields(r, e);
 
-        // Apply defaults and flags
+        // set user id (required)
+        e.setUserId(r.userId());
+
+        // boolean fields: use provided value when present, otherwise sensible defaults
         e.setSendReminders(Boolean.TRUE.equals(r.sendReminders()));
         e.setChargeLateFees(Boolean.TRUE.equals(r.chargeLateFees()));
         e.setAllowInvoiceAttachments(Boolean.TRUE.equals(r.allowInvoiceAttachments()));
-        e.setIsActive(r.isActive() == null || r.isActive()); // default to active
+        // default to active when not specified
+        e.setIsActive(r.isActive() == null || r.isActive());
 
+        log.info("Created ClientEntity from DTO; email={}, isActive={}", e.getEmail(), e.getIsActive());
         return e;
     }
 
+    // ------------------------------------------------------------------------
+    // TO ENTITY (UPDATE)
+    // ------------------------------------------------------------------------
+
     /**
-     * Merges a request into an **existing entity**.
-     * - Only non-null request fields overwrite entity fields.
-     * - Useful for PATCH/PUT operations.
+     * Update an existing {@link ClientEntity} using values from {@link TmsClientDto}.
      *
-     * @param r request DTO
-     * @param e existing entity to update
+     * <p>Only non-null fields from the DTO are applied — this supports partial updates.</p>
+     *
+     * @param r DTO carrying updates (must not be null)
+     * @param e target entity to update (must not be null)
+     * @throws IllegalArgumentException if {@code r} or {@code e} is null
      */
     public static void updateEntity(TmsClientDto r, ClientEntity e) {
+        if (r == null) {
+            log.error("updateEntity called with null TmsClientDto");
+            throw new IllegalArgumentException("TmsClientDto must not be null");
+        }
+        if (e == null) {
+            log.error("updateEntity called with null ClientEntity");
+            throw new IllegalArgumentException("ClientEntity must not be null");
+        }
+
+        log.debug("Updating ClientEntity id={} from DTO", e.getId());
+
         applyCommonFields(r, e);
 
-        if (r.sendReminders() != null) e.setSendReminders(r.sendReminders());
-        if (r.chargeLateFees() != null) e.setChargeLateFees(r.chargeLateFees());
-        if (r.allowInvoiceAttachments() != null) e.setAllowInvoiceAttachments(r.allowInvoiceAttachments());
-        if (r.isActive() != null) e.setIsActive(r.isActive());
+        // update userId only when provided (should normally be required and immutable)
+        Optional.ofNullable(r.userId()).ifPresent(e::setUserId);
+        Optional.ofNullable(r.sendReminders()).ifPresent(e::setSendReminders);
+        Optional.ofNullable(r.chargeLateFees()).ifPresent(e::setChargeLateFees);
+        Optional.ofNullable(r.allowInvoiceAttachments()).ifPresent(e::setAllowInvoiceAttachments);
+        Optional.ofNullable(r.isActive()).ifPresent(e::setIsActive);
+
+        log.info("Updated ClientEntity id={} (email={})", e.getId(), e.getEmail());
     }
 
+    // ------------------------------------------------------------------------
+    // TO DTO (RESPONSE)
+    // ------------------------------------------------------------------------
+
     /**
-     * Converts a **persistence entity** into a response DTO.
-     * - Used to return API results to clients.
+     * Map {@link ClientEntity} -> {@link TmsClientDto} for API responses.
      *
-     * @param e entity from DB
-     * @return API response DTO
+     * @param e source entity (must not be null)
+     * @return DTO populated from entity
+     * @throws IllegalArgumentException if {@code e} is null
      */
     public static TmsClientDto toResponse(ClientEntity e) {
-        return TmsClientDto.builder()
+        if (e == null) {
+            log.error("toResponse called with null ClientEntity");
+            throw new IllegalArgumentException("ClientEntity must not be null");
+        }
+
+        log.debug("Mapping ClientEntity -> TmsClientDto for id={}", e.getId());
+
+        TmsClientDto dto = TmsClientDto.builder()
                 .id(e.getId())
+                .userId(e.getUserId())
+                .email(e.getEmail())
                 .companyName(e.getCompanyName())
                 .firstName(e.getFirstName())
                 .lastName(e.getLastName())
-                .email(e.getEmail())
                 .mobilePhone(e.getMobilePhone())
                 .businessPhone(e.getBusinessPhone())
                 .addressLine1(e.getAddressLine1())
@@ -90,32 +149,48 @@ public class TmsClientMapper {
                 .language(e.getLanguage())
                 .allowInvoiceAttachments(e.getAllowInvoiceAttachments())
                 .isActive(e.getIsActive())
-                .createdAt(e.getCreatedAt())
-                .updatedAt(e.getUpdatedAt())
+                .createdDt(e.getCreatedDt() != null ? OffsetDateTime.ofInstant(e.getCreatedDt(), ZoneOffset.UTC) : null)
+                .updatedDt(e.getUpdatedDt() != null ? OffsetDateTime.ofInstant(e.getUpdatedDt(), ZoneOffset.UTC) : null)
+                .name(e.getName()) // from entity lifecycle hooks
                 .build();
+
+        log.info("Mapped ClientEntity id={} -> TmsClientDto email={}", e.getId(), e.getEmail());
+        return dto;
     }
 
-    // ----------------- helper methods -----------------
+    // ------------------------------------------------------------------------
+    // HELPER: common field copy
+    // ------------------------------------------------------------------------
 
     /**
-     * Common field setter for both new + updated entities.
-     * - Only non-null fields from request overwrite entity values.
+     * Applies common (non-boolean) fields from DTO -> Entity.
+     *
+     * <p>Only non-null DTO values are copied to allow partial updates.</p>
+     *
+     * @param r DTO (source)
+     * @param e Entity (target)
      */
     private static void applyCommonFields(TmsClientDto r, ClientEntity e) {
-        if (r.companyName()   != null) e.setCompanyName(r.companyName());
-        if (r.firstName()     != null) e.setFirstName(r.firstName());
-        if (r.lastName()      != null) e.setLastName(r.lastName());
-        if (r.email()         != null) e.setEmail(r.email());
-        if (r.mobilePhone()   != null) e.setMobilePhone(r.mobilePhone());
-        if (r.businessPhone() != null) e.setBusinessPhone(r.businessPhone());
-        if (r.addressLine1()  != null) e.setAddressLine1(r.addressLine1());
-        if (r.addressLine2()  != null) e.setAddressLine2(r.addressLine2());
-        if (r.city()          != null) e.setCity(r.city());
-        if (r.state()         != null) e.setState(r.state());
-        if (r.postalCode()    != null) e.setPostalCode(r.postalCode());
-        if (r.countryCode()   != null) e.setCountryCode(r.countryCode());
-        if (r.lateFeePercent()!= null) e.setLateFeePercent(r.lateFeePercent());
-        if (r.currencyCode()  != null) e.setCurrencyCode(r.currencyCode());
-        if (r.language()      != null) e.setLanguage(r.language());
+        // defensive: caller already checks for nulls, but keep minimal guard
+        if (r == null || e == null) {
+            log.debug("applyCommonFields skipped due to null argument (r={}, e={})", r, e);
+            return;
+        }
+
+        Optional.ofNullable(r.companyName()).ifPresent(e::setCompanyName);
+        Optional.ofNullable(r.firstName()).ifPresent(e::setFirstName);
+        Optional.ofNullable(r.lastName()).ifPresent(e::setLastName);
+        Optional.ofNullable(r.email()).ifPresent(e::setEmail);
+        Optional.ofNullable(r.mobilePhone()).ifPresent(e::setMobilePhone);
+        Optional.ofNullable(r.businessPhone()).ifPresent(e::setBusinessPhone);
+        Optional.ofNullable(r.addressLine1()).ifPresent(e::setAddressLine1);
+        Optional.ofNullable(r.addressLine2()).ifPresent(e::setAddressLine2);
+        Optional.ofNullable(r.city()).ifPresent(e::setCity);
+        Optional.ofNullable(r.state()).ifPresent(e::setState);
+        Optional.ofNullable(r.postalCode()).ifPresent(e::setPostalCode);
+        Optional.ofNullable(r.countryCode()).ifPresent(e::setCountryCode);
+        Optional.ofNullable(r.lateFeePercent()).ifPresent(e::setLateFeePercent);
+        Optional.ofNullable(r.currencyCode()).ifPresent(e::setCurrencyCode);
+        Optional.ofNullable(r.language()).ifPresent(e::setLanguage);
     }
 }

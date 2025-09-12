@@ -66,4 +66,24 @@ public record TmsApiResponse<T>(
                 LocalDateTime.now()
         );
     }
+    public static <T> TmsApiResponse<T> success(String message, T data) {
+        return new TmsApiResponse<>(
+                true,
+                org.springframework.http.HttpStatus.OK.value(),
+                org.springframework.http.HttpStatus.OK.getReasonPhrase(),
+                message,
+                data,
+                LocalDateTime.now()
+        );
+    }
+    public static <T> TmsApiResponse<T> created(String message, T data) {
+        return new TmsApiResponse<>(
+                true,
+                org.springframework.http.HttpStatus.CREATED.value(),
+                org.springframework.http.HttpStatus.CREATED.getReasonPhrase(),
+                message,
+                data,
+                LocalDateTime.now()
+        );
+    }
 }

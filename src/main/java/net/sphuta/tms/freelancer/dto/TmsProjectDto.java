@@ -3,6 +3,7 @@ package net.sphuta.tms.freelancer.dto;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
+import lombok.Builder;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -13,13 +14,14 @@ import java.time.LocalDate;
  * <p>Uses validation groups + Swagger @Schema access modes to
  * control what appears in request vs response.</p>
  */
+@Builder(toBuilder = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record TmsProjectDto(
 
         /** Project identifier (response only). */
         @Schema(accessMode = Schema.AccessMode.READ_ONLY)
-        @Null(groups = {Create.class}, message = "id is auto-generated")
-        Integer id,
+//        @Null(groups = {Create.class}, message = "id is auto-generated")
+        int id,
 
         /** Linked client info (response only). */
         @Schema(accessMode = Schema.AccessMode.READ_ONLY)
@@ -58,11 +60,12 @@ public record TmsProjectDto(
 
         /** Timestamp when record was created (response only). */
         @Schema(accessMode = Schema.AccessMode.READ_ONLY)
-        String createdAt,
+        String createdDt,
 
         /** Timestamp when record was last updated (response only). */
         @Schema(accessMode = Schema.AccessMode.READ_ONLY)
-        String updatedAt
+        String updatedDt
+
 ) {
     /** Validation groups. */
     public interface Create {}

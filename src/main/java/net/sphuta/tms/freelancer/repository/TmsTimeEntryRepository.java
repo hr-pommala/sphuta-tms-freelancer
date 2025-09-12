@@ -26,27 +26,8 @@ import java.util.Optional;
  */
 public interface TmsTimeEntryRepository extends JpaRepository<TimeEntryEntity, Integer> {
 
-    /**
-     * Finds all approved and uninvoiced time entries for a client within a given date range.
-     *
-     * Purpose:
-     * - Used to generate invoices (only APPROVED entries not yet linked to an invoice).
-     *
-     * @param clientId the ID of the client
-     * @param from     start date (inclusive)
-     * @param to       end date (inclusive)
-     * @return list of matching uninvoiced time entries
-     */
-    List<TimeEntryEntity> findByTimesheet(TimesheetEntity timesheet);
-    @Query("""
-           select t from TimeEntryEntity t
-            where t.clientId = :clientId
-              and t.status = 'APPROVED'
-              and t.invoiceId is null
-              and t.entryDate between :from and :to
-           """)
-    List<TimeEntryEntity> findUninvoiced(Integer clientId, LocalDate from, LocalDate to);
 
+    List<TimeEntryEntity> findByTimesheet(TimesheetEntity timesheet);
     /**
      * Checks whether the given client has at least one time entry.
      *
@@ -55,10 +36,8 @@ public interface TmsTimeEntryRepository extends JpaRepository<TimeEntryEntity, I
      * @param t the timesheet entity
      * @param d the entry date
      * @param desc the description of the time entry
-     * @return an {@link Optional} containing the matching time entry if found, or empty if not
-     * @param clientId the client ID to check
-     * @return true if at least one time entry exists for the client; false otherwise
+     * @return an {@link Optional} containing the matching time entry if found, or empty if not* @return true if at least one time entry exists for the client; false otherwise
      */
     Optional<TimeEntryEntity> findByTimesheetAndEntryDateAndDescription(TimesheetEntity t, LocalDate d, String desc);
-    boolean existsByClientId(Integer clientId);
+
 }

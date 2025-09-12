@@ -48,7 +48,7 @@ class TmsTimesheetControllerTest {
                 2001,
                 LocalDate.parse("2025-09-01"),
                 LocalDate.parse("2025-09-15"),
-                null,
+                0,
                 null,
                 TimesheetStatus.DRAFT,
                 List.of(),
@@ -76,7 +76,7 @@ class TmsTimesheetControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.statusCode").value(201))
-                .andExpect(jsonPath("$.data.id").value(101));
+                .andExpect(jsonPath("$.data.timesheetId").value(101)); // << changed here
     }
 
     @Test
@@ -100,7 +100,7 @@ class TmsTimesheetControllerTest {
         mvc.perform(get("/api/v1/timesheets/{id}", id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.id").value(id));
+                .andExpect(jsonPath("$.data.timesheetId").value(id)); // << changed here
     }
 
     @Test
@@ -115,7 +115,7 @@ class TmsTimesheetControllerTest {
                                 "Backend Refactor",
                                 new BigDecimal("5"),
                                 new BigDecimal("70"),
-                                null,
+                                0,
                                 null
                         )
                 ),
@@ -168,19 +168,6 @@ class TmsTimesheetControllerTest {
     }
 
     @Test
-    @DisplayName("PATCH /api/v1/timesheets/{id}/lock → 200 OK")
-    void lock_ok() throws Exception {
-        var id = 101;
-        Mockito.doNothing().when(timesheetService).lock(eq(id));
-
-        mvc.perform(patch("/api/v1/timesheets/{id}/lock", id))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.message").value("Timesheet locked successfully")) // ✅ updated expectation
-                .andExpect(jsonPath("$.data").value("Timesheet locked")); // ✅ matches your response "data"
-    }
-
-    @Test
     @DisplayName("POST /api/v1/time-entries → 201 Created")
     void create_entry_ok() throws Exception {
         var req = new TimeEntryDto(
@@ -189,7 +176,7 @@ class TmsTimesheetControllerTest {
                 "API Development",
                 new BigDecimal("6"),
                 new BigDecimal("60"),
-                null,
+                0,
                 null
         );
 

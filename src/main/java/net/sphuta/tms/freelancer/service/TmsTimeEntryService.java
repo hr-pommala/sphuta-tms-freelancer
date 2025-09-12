@@ -2,6 +2,8 @@ package net.sphuta.tms.freelancer.service;
 
 import net.sphuta.tms.freelancer.dto.TimeEntryDto;
 
+import java.util.List;
+
 /**
  * Service interface for managing Time Entries in the Freelancer Timesheet Management System.
  * <p>
@@ -24,5 +26,13 @@ public interface TmsTimeEntryService {
      *
      * @param id the unique identifier of the time entry to delete
      */
-    void delete(Integer id);
+    void delete(int id);
+
+    /**
+     * Retrieve all time entries across all timesheets.
+     *
+     * @return list of {@link TimeEntryDto} (may be empty)
+     */
+    List<TimeEntryDto> getAll();
+
 }

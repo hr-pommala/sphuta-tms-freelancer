@@ -2,6 +2,8 @@ package net.sphuta.tms.freelancer.service;
 
 import net.sphuta.tms.freelancer.dto.*;
 
+import java.util.List;
+
 /**
  * Service interface for managing Timesheets in the Freelancer Timesheet Management System.
  */
@@ -21,7 +23,7 @@ public interface TmsTimesheetService {
      * @param id unique identifier of the timesheet
      * @return {@link TmsTimesheetDto} containing the timesheet details
      */
-    TmsTimesheetDto get(Integer id);
+    TmsTimesheetDto get(int id);
 
     /**
      * Submits a timesheet for approval.
@@ -29,7 +31,7 @@ public interface TmsTimesheetService {
      * @param id unique identifier of the timesheet
      * @return {@link TmsTimesheetDto} with updated status after submission
      */
-    TmsTimesheetDto submit(Integer id);
+    TmsTimesheetDto submit(int id);
 
     /**
      * Bulk upsert operation for time entries of a timesheet.
@@ -38,12 +40,24 @@ public interface TmsTimesheetService {
      * @param req {@link BulkUpsertDto} containing multiple entries to insert or update
      * @return {@link BulkUpsertDto} with the results of the bulk operation
      */
-    BulkUpsertDto bulkUpsert(Integer timesheetId, BulkUpsertDto req);
+    BulkUpsertDto bulkUpsert(int timesheetId, BulkUpsertDto req);
 
     /**
-     * Locks a timesheet to prevent further modifications.
+     * Retrieve all timesheets (non-paged).
+     *
+     * @return list of {@link TmsTimesheetDto}
+     */
+    List<TmsTimesheetDto> getAll();
+
+    /**
+     * Delete a timesheet by id.
+     *
+     * Business rules:
+     * - If the timesheet does not exist -> NotFoundException
+     * - Deletes associated time entries first to avoid FK constraints, then deletes the timesheet
      *
      * @param id unique identifier of the timesheet
      */
-    void lock(Integer id);
+    void delete(int id);
+
 }

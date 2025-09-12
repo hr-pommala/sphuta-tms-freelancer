@@ -8,6 +8,9 @@ import net.sphuta.tms.freelancer.entity.TimeEntryEntity;
 import net.sphuta.tms.freelancer.entity.TimesheetEntity;
 import net.sphuta.tms.freelancer.enums.TimesheetStatus;
 import net.sphuta.tms.freelancer.exception.ApiExceptions;
+import net.sphuta.tms.freelancer.exception.ConflictException;
+import net.sphuta.tms.freelancer.exception.NotFoundException;
+import net.sphuta.tms.freelancer.repository.TmsProjectRepository;
 import net.sphuta.tms.freelancer.repository.TmsTimeEntryRepository;
 import net.sphuta.tms.freelancer.repository.TmsTimesheetRepository;
 import net.sphuta.tms.freelancer.service.TmsTimesheetService;
@@ -19,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Implementation of {@link TmsTimesheetService} for managing Timesheets.
@@ -42,6 +46,13 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
     private TmsTimeEntryRepository entryRepo;
 
     /**
+     * Repository used only for existence check of projects.
+     * Replace with your actual project client/repository if needed.
+     */
+    @Autowired
+    private TmsProjectRepository projectRepository;
+
+    /**
      * Create a new timesheet for a project and period.
      *
      * @param req DTO containing project and period details
@@ -58,12 +69,18 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
             throw new ApiExceptions.ValidationException("periodEnd must be >= periodStart");
         }
 
+        // NEW: verify project exists (throw if not)
+        if (Optional.ofNullable(req.projectId()).filter(projectRepository::existsById).isEmpty()) {
+            log.error("Project not found: projectId={}", req.projectId());
+            throw new NotFoundException("Project not found");
+        }
+
         // Check for duplicate timesheet
         timesheetRepo.findByProjectIdAndPeriodStartAndPeriodEnd(req.projectId(), req.periodStart(), req.periodEnd())
                 .ifPresent(t -> {
                     log.error("Conflict: Timesheet already exists for projectId={} period {}..{}",
                             req.projectId(), req.periodStart(), req.periodEnd());
-                    throw new ApiExceptions.ConflictException("Timesheet for project & period already exists");
+                    throw new ConflictException("Timesheet for project & period already exists");
                 });
 
         // Build and save new timesheet entity
@@ -88,14 +105,13 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
      * @return {@link TmsTimesheetDto} with entries and totals
      */
     @Override
-    @Transactional(readOnly = true)
-    public TmsTimesheetDto get(Integer id) {
+    public TmsTimesheetDto get(int id) {
         log.info("Fetching timesheet by id={}", id);
 
         var t = timesheetRepo.findById(id)
                 .orElseThrow(() -> {
                     log.error("Timesheet not found: id={}", id);
-                    return new ApiExceptions.NotFoundException("Timesheet not found");
+                    return new NotFoundException("Timesheet not found");
                 });
 
         // Force load entries from lazy collection
@@ -113,13 +129,13 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
      * @return updated {@link TmsTimesheetDto} with APPROVED status
      */
     @Override
-    public TmsTimesheetDto submit(Integer id) {
+    public TmsTimesheetDto submit(int id) {
         log.info("Submitting timesheet id={} for approval", id);
 
         var t = timesheetRepo.findById(id)
                 .orElseThrow(() -> {
                     log.error("Timesheet not found during submit: id={}", id);
-                    return new ApiExceptions.NotFoundException("Timesheet not found");
+                    return new NotFoundException("Timesheet not found");
                 });
 
         t.setStatus(TimesheetStatus.APPROVED);
@@ -144,12 +160,12 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
      * @return {@link BulkUpsertDto} containing inserted/updated counts and processed entries
      */
     @Override
-    public BulkUpsertDto bulkUpsert(Integer timesheetId, BulkUpsertDto req) {
+    public BulkUpsertDto bulkUpsert(int timesheetId, BulkUpsertDto req) {
         log.info("Bulk upsert requested: timesheetId={}, rows={}",
                 timesheetId, (req.entries() == null ? 0 : req.entries().size()));
 
         // If request has no entries, log and return an empty response
-        if (req.entries() == null || req.entries().isEmpty()) {
+        if (Optional.ofNullable(req.entries()).filter(entries -> !entries.isEmpty()).isEmpty()) {
             log.warn("No entries provided for bulk upsert");
             return TmsTimesheetMappers.toBulkUpsertResponse(List.of(), req.mode(), 0, 0, 0, BigDecimal.ZERO);
         }
@@ -158,13 +174,13 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
         var t = timesheetRepo.findById(timesheetId)
                 .orElseThrow(() -> {
                     log.error("Timesheet not found: id={}", timesheetId);
-                    return new ApiExceptions.NotFoundException("Timesheet not found");
+                    return new NotFoundException("Timesheet not found");
                 });
 
         // Check mutability of timesheet
         if (!t.getStatus().isMutable()) {
             log.error("Timesheet is LOCKED and cannot be modified: id={}", timesheetId);
-            throw new ApiExceptions.ConflictException("Timesheet is LOCKED and cannot be modified");
+            throw new ConflictException("Timesheet is LOCKED and cannot be modified");
         }
 
         int inserted = 0, updated = 0;
@@ -183,7 +199,7 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
             }
 
             // Validation: hours must be > 0
-            if (r.hours() == null || r.hours().compareTo(BigDecimal.ZERO) <= 0) {
+            if (Optional.ofNullable(r.hours()).filter(h -> h.compareTo(BigDecimal.ZERO) > 0).isEmpty()) {
                 log.warn("Validation failed: entry with invalid hours. entry={}", r);
                 throw new ApiExceptions.ValidationException("Some entries invalid: hours must be > 0");
             }
@@ -192,7 +208,7 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
             var existing = entryRepo.findByTimesheetAndEntryDateAndDescription(
                     t, r.entryDate(), r.description()).orElse(null);
 
-            if (existing == null) {
+            if (Optional.ofNullable(existing).isEmpty()) {
                 // INSERT path
                 var e = buildEntryFromReq(t, r);
                 entryRepo.save(e);
@@ -205,7 +221,7 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
                 // UPDATE path
                 existing.setHours(r.hours());
                 existing.setRateAtEntry(r.rateAtEntry());
-                existing.setCostAtEntry(r.rateAtEntry() == null ? null : r.rateAtEntry().multiply(r.hours()));
+                existing.setCostAtEntry(Optional.ofNullable(r.rateAtEntry()).map(rate -> rate.multiply(r.hours())).orElse(null));
                 updated++;
                 processed.add(TmsTimesheetMappers.toTimeEntryDto(existing));
                 log.info("Updated existing entry: id={}, date={}, desc='{}', newHours={}, newRate={}",
@@ -234,7 +250,7 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
      * @return populated {@link TimeEntryEntity}
      */
     private TimeEntryEntity buildEntryFromReq(TimesheetEntity t, TimeEntryDto r) {
-        var cost = r.rateAtEntry() == null ? null : r.rateAtEntry().multiply(r.hours());
+        var cost = Optional.ofNullable(r.rateAtEntry()).map(rate -> rate.multiply(r.hours())).orElse(null);
         var entry = TimeEntryEntity.builder()
                 .timesheet(t)
                 .entryDate(r.entryDate())
@@ -250,23 +266,54 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
     }
 
     /**
-     * Lock a timesheet to prevent modifications.
+     * Retrieve all timesheets (non-paged).
      *
-     * @param id timesheet identifier
+     * Maps TimesheetEntity -> TmsTimesheetDto using TmsTimesheetMappers.toDetail.
      */
     @Override
-    public void lock(Integer id) {
-        log.info("Locking timesheet id={}", id);
+    public List<TmsTimesheetDto> getAll() {
+        log.info("Service: fetching all timesheets");
 
-        var t = timesheetRepo.findById(id)
-                .orElseThrow(() -> {
-                    log.error("Timesheet not found during lock: id={}", id);
-                    return new ApiExceptions.NotFoundException("Timesheet not found");
+        // fetch all entities
+        var allEntities = timesheetRepo.findAll();
+
+        log.info("Service: found {} timesheets", allEntities.size());
+
+        var timesheet = TmsTimesheetMappers.toTimesheetResponseList(allEntities);
+        return timesheet;
+    }
+
+    /**
+     * Delete a timesheet by id.
+     *
+     * Business logic:
+     * - Ensure timesheet exists; otherwise throw NotFoundException.
+     * - Delete associated time entries first to avoid FK/cascade issues (safer).
+     * - Delete the timesheet entity.
+     */
+    @Override
+    public void delete(int id) {
+        log.info("Service: deleting timesheet id={}", id);
+
+        var ts = timesheetRepo.findById(id).orElseThrow(() -> {
+            log.warn("Service: timesheet not found id={}", id);
+            return new NotFoundException("Timesheet not found");
+        });
+
+        // Defensive: delete entries belonging to this timesheet explicitly (avoids FK constraint issues if cascade not configured)
+        var entries = ts.getEntries();
+        Optional.ofNullable(entries)
+                .filter(e -> !e.isEmpty())
+                .ifPresent(e -> {
+                    log.debug("Service: deleting {} entries for timesheet id={}", e.size(), id);
+                    entryRepo.deleteAll(e);
+                    ts.getEntries().clear();
                 });
 
-        t.setStatus(TimesheetStatus.LOCKED);
-        log.info("Timesheet locked successfully: id={}", id);
+        // Now delete the timesheet
+        timesheetRepo.delete(ts);
+
+        log.info("Service: timesheet deleted id={}", id);
     }
+
 }
-
-

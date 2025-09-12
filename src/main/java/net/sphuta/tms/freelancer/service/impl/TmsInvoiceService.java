@@ -61,50 +61,50 @@ public class TmsInvoiceService {
      * - 400 Bad Request if any timeEntryId is invalid.
      * - 409 Conflict if entries are not APPROVED, already invoiced, or client mismatched.
      */
-    @Transactional
-    public TmsInvoiceDto createFromEntries(TmsInvoiceDto req) {
-        // ---- entry log + (optional) timing ----
-        log.debug("Creating invoice for client {} with {} time entries",
-                req.clientId(), req.timeEntryIds().size());
-        long _startNs = System.nanoTime();
-
-        // ---- fetch and validate requested time entries ----
-        List<TimeEntryEntity> entries = timeRepo.findAllById(req.timeEntryIds());
-
-        // Ensure every requested id exists
-        if (entries.size() != req.timeEntryIds().size()) {
-            log.warn("Bad request: some timeEntryIds not found");
-            throw new TmsException(HttpStatus.BAD_REQUEST,
-                    "One or more timeEntryIds are invalid");
-        }
-
-        // Validate client match, not already invoiced, and APPROVED status
-        boolean ok = entries.stream().allMatch(te ->
-                req.clientId().equals(te.getClientId()) &&
-                        te.getInvoiceId() == null &&
-                        te.getStatus() == TimeEntryEntity.Status.APPROVED);
-
-        if (!ok) {
-            log.warn("Conflict: entries not approved, already invoiced, or client mismatch");
-            throw new TmsException(HttpStatus.CONFLICT,
-                    "Entries must be APPROVED and not already invoiced for the same client");
-        }
-
-        // ---- create invoice entity in DRAFT ----
-        InvoiceEntity inv = TmsInvoiceMapper.toNewDraft(req);
-        inv = invoiceRepo.save(inv);
-
-        // ---- link all entries to the new invoice ----
-        Integer invId = inv.getId();
-        entries.forEach(te -> te.setInvoiceId(invId));
-        timeRepo.saveAll(entries);
-
-        // ---- success + timing log ----
-        long _tookMs = (System.nanoTime() - _startNs) / 1_000_000L;
-        log.info("Created invoice {} for client {} ({} ms)", invId, req.clientId(), _tookMs);
-
-        return TmsInvoiceMapper.toResponse(inv);
-    }
+//    @Transactional
+//    public TmsInvoiceDto createFromEntries(TmsInvoiceDto req) {
+//        // ---- entry log + (optional) timing ----
+//        log.debug("Creating invoice for client {} with {} time entries",
+//                req.clientId(), req.timeEntryIds().size());
+//        long _startNs = System.nanoTime();
+//
+//        // ---- fetch and validate requested time entries ----
+//        List<TimeEntryEntity> entries = timeRepo.findAllById(req.timeEntryIds());
+//
+//        // Ensure every requested id exists
+//        if (entries.size() != req.timeEntryIds().size()) {
+//            log.warn("Bad request: some timeEntryIds not found");
+//            throw new TmsException(HttpStatus.BAD_REQUEST,
+//                    "One or more timeEntryIds are invalid");
+//        }
+//
+//        // Validate client match, not already invoiced, and APPROVED status
+//        boolean ok = entries.stream().allMatch(te ->
+//                req.clientId().equals(te.getClientId()) &&
+//                        te.getInvoiceId() == null &&
+//                        te.getStatus() == TimeEntryEntity.Status.APPROVED);
+//
+//        if (!ok) {
+//            log.warn("Conflict: entries not approved, already invoiced, or client mismatch");
+//            throw new TmsException(HttpStatus.CONFLICT,
+//                    "Entries must be APPROVED and not already invoiced for the same client");
+//        }
+//
+//        // ---- create invoice entity in DRAFT ----
+//        InvoiceEntity inv = TmsInvoiceMapper.toNewDraft(req);
+//        inv = invoiceRepo.save(inv);
+//
+//        // ---- link all entries to the new invoice ----
+//        Integer invId = inv.getId();
+//        entries.forEach(te -> te.setInvoiceId(invId));
+//        timeRepo.saveAll(entries);
+//
+//        // ---- success + timing log ----
+//        long _tookMs = (System.nanoTime() - _startNs) / 1_000_000L;
+//        log.info("Created invoice {} for client {} ({} ms)", invId, req.clientId(), _tookMs);
+//
+//        return TmsInvoiceMapper.toResponse(inv);
+//    }
 
     /**
      * Send/issue an invoice (transition DRAFT → SENT).
