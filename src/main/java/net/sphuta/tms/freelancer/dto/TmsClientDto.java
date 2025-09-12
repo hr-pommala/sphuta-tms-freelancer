@@ -39,14 +39,14 @@ public record TmsClientDto(
 
         /** Auto-generated primary key for the client (read-only). */
         @Schema(description = "Client ID (auto-incremented)", example = "101", accessMode = Schema.AccessMode.READ_ONLY)
-        Integer id,
+        int id,
 
         // ------------------------------------------------------------------------
         // CONTACT DETAILS
         // ------------------------------------------------------------------------
         @NotNull(message = "userId is required")
         @Schema(description = "Owner user ID", example = "1")
-        Integer userId,
+        int userId,
 
         /** Primary billing email (required, validated with @Email). */
         @NotBlank(message = "email is required")

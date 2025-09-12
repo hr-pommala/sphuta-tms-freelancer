@@ -5,21 +5,19 @@ import lombok.extern.slf4j.Slf4j;
 import net.sphuta.tms.freelancer.dto.TmsClientDto;
 import net.sphuta.tms.freelancer.entity.ClientEntity;
 import net.sphuta.tms.freelancer.exception.TmsException;
-import net.sphuta.tms.freelancer.repository.TmsClientRepository;
-import net.sphuta.tms.freelancer.repository.TmsEstimateRepository;
-import net.sphuta.tms.freelancer.repository.TmsInvoiceRepository;
-import net.sphuta.tms.freelancer.repository.TmsTimeEntryRepository;
-import net.sphuta.tms.freelancer.repository.TmsUserRepository;
+import net.sphuta.tms.freelancer.repository.*;
+import net.sphuta.tms.freelancer.service.TmsClientService;
 import net.sphuta.tms.freelancer.util.TmsClientMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.data.domain.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
-import java.util.regex.Pattern;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -27,53 +25,61 @@ import java.util.stream.Collectors;
  * {@code TmsClientServiceImpl}
  * ==========================================================
  *
- * Service implementation for managing {@link ClientEntity} lifecycle.
- *
  * <h2>Responsibilities:</h2>
  * <ul>
- *   <li>Provides CRUD operations for clients.</li>
- *   <li>Supports archive/unarchive functionality.</li>
- *   <li>Validates referential integrity before delete (time entries, invoices, estimates).</li>
- *   <li>Generates CSV exports for client data.</li>
- *   <li>Maps between entity and DTO using {@link TmsClientMapper}.</li>
+ *     <li>Implements {@link TmsClientService} contract.</li>
+ *     <li>Manages lifecycle of {@link ClientEntity} including CRUD, archive/unarchive, export.</li>
+ *     <li>Handles duplicate checks, referential integrity, and error handling.</li>
+ *     <li>Maps between {@link ClientEntity} and {@link TmsClientDto} using {@link TmsClientMapper}.</li>
  * </ul>
  *
  * <h2>Logging Policy:</h2>
  * <ul>
- *   <li><b>DEBUG</b>: entry logs, parameter details, verbose traces.</li>
- *   <li><b>INFO</b>: successful operations (create, update, archive, export).</li>
- *   <li><b>WARN</b>: business rule violations (delete blocked).</li>
- *   <li><b>ERROR</b>: unexpected system/runtime failures.</li>
+ *     <li>DEBUG → Entry logs, input parameters.</li>
+ *     <li>INFO → Successful CRUD/archive/export operations.</li>
+ *     <li>WARN → Conflict/constraint violations.</li>
+ *     <li>ERROR → Entity not found or unexpected system failures.</li>
  * </ul>
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class TmsClientServiceImpl {
+public class TmsClientServiceImpl implements TmsClientService {
 
-    @Autowired private TmsClientRepository repo;
-    @Autowired private TmsTimeEntryRepository timeRepo;
-    @Autowired private TmsInvoiceRepository invoiceRepo;
-    @Autowired private TmsEstimateRepository estimateRepo;
-    @Autowired private TmsUserRepository userRepo;
+    /** Repository for {@link ClientEntity} CRUD operations */
+    @Autowired
+    private TmsClientRepository repo;
 
-    //Add this pattern near class-level (static)
-    private static final Pattern EMAIL_RX = Pattern.compile(
-            "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$"
-    );
+    /** Repository for time entry references */
+    @Autowired
+    private TmsTimeEntryRepository timeRepo;
+
+    /** Repository for invoice references */
+    @Autowired
+    private TmsInvoiceRepository invoiceRepo;
+
+    /** Repository for estimate references */
+    @Autowired
+    private TmsEstimateRepository estimateRepo;
+
+    /** Repository for user validation */
+    @Autowired
+    private TmsUserRepository userRepo;
+
     // ------------------------------------------------------------------------
     // LISTING
     // ------------------------------------------------------------------------
 
     /**
-     * Retrieves a paginated list of clients filtered by active/archived.
+     * Retrieve paginated list of clients filtered by active/archived flag.
      *
      * @param active true = only active, false = only archived
      * @param search free-text search filter
      * @param page   page number (0-based)
      * @param size   number of records per page
-     * @return paginated list of client DTOs
+     * @return paginated {@link Page} of {@link TmsClientDto}
      */
+    @Override
     public Page<TmsClientDto> list(boolean active, String search, int page, int size) {
         int p = Math.max(page, 0);
         int s = Math.min(Math.max(size, 1), 100);
@@ -85,13 +91,14 @@ public class TmsClientServiceImpl {
     }
 
     /**
-     * Retrieves a paginated list of ALL clients (both active and archived).
+     * Retrieve paginated list of all clients (active + archived).
      *
      * @param search free-text search filter
-     * @param page   page number
-     * @param size   number of records
-     * @return paginated list of client DTOs
+     * @param page   page number (0-based)
+     * @param size   number of records per page
+     * @return paginated {@link Page} of {@link TmsClientDto}
      */
+    @Override
     public Page<TmsClientDto> listAll(String search, int page, int size) {
         int p = Math.max(page, 0);
         int s = Math.min(Math.max(size, 1), 100);
@@ -107,40 +114,43 @@ public class TmsClientServiceImpl {
     // ------------------------------------------------------------------------
 
     /**
-     * Fetches a client by ID or throws {@link TmsException} with 404.
+     * Get a client by ID.
      *
      * @param id client ID
-     * @return client DTO
+     * @return {@link TmsClientDto}
+     * @throws TmsException if client not found
      */
-    @Transactional(readOnly = true)
-    public TmsClientDto get(Integer id) {
+    @Override
+    public TmsClientDto get(int id) {
         log.debug("Fetching client by id={}", id);
-        ClientEntity e = require(id);
-        return TmsClientMapper.toResponse(e);
+        return repo.findById(id)
+                .map(TmsClientMapper::toResponse)
+                .orElseThrow(() -> {
+                    log.error("Client not found id={}", id);
+                    return new TmsException(HttpStatus.NOT_FOUND, "Client not found");
+                });
     }
 
     // ------------------------------------------------------------------------
-    // CREATE + UPDATE
+    // CREATE
     // ------------------------------------------------------------------------
 
     /**
-     * Creates a new client.
+     * Create a new client record.
      *
-     * @param req DTO containing client details
+     * @param req {@link TmsClientDto} request payload
      * @return created client DTO
      */
-    @Transactional
+    @Override
     public TmsClientDto create(TmsClientDto req) {
         log.debug("Creating new client: {}", req);
 
-        // Business logic only: user existence and duplicate checks
-        Integer userId = req.userId();
+        int userId = req.userId();
         if (!userRepo.existsById(userId)) {
             log.warn("User not found for userId={}", userId);
             throw new TmsException(HttpStatus.NOT_FOUND, "User not found");
         }
 
-        // Duplicate checks
         boolean existsUser = repo.existsByUserIdAndEmailIgnoreCase(userId, req.email());
         if (existsUser) {
             log.warn("Duplicate email for user | userId={}, email={}", userId, req.email());
@@ -163,30 +173,35 @@ public class TmsClientServiceImpl {
         }
     }
 
+    // ------------------------------------------------------------------------
+    // UPDATE
+    // ------------------------------------------------------------------------
+
     /**
-     * Updates an existing client.
+     * Update an existing client.
      *
      * @param id  client ID
-     * @param req DTO with new details
+     * @param req {@link TmsClientDto} payload with new details
      * @return updated client DTO
      */
-    @Transactional
-    public TmsClientDto update(Integer id, TmsClientDto req) {
+    @Override
+    public TmsClientDto update(int id, TmsClientDto req) {
         log.debug("Updating client id={} with details={}", id, req);
-        ClientEntity e = require(id);
 
-        // Only business logic: user existence and duplicate checks
-        Integer reqUserId = req.userId() != null ? req.userId() : e.getUserId();
+        ClientEntity e = repo.findById(id).orElseThrow(() -> {
+            log.error("Client not found id={}", id);
+            return new TmsException(HttpStatus.NOT_FOUND, "Client not found");
+        });
+
+        int reqUserId = Optional.ofNullable(req.userId()).orElse(e.getUserId());
         if (!userRepo.existsById(reqUserId)) {
             log.warn("User not found for userId={}", reqUserId);
             throw new TmsException(HttpStatus.NOT_FOUND, "User not found");
         }
 
-        String newCompany = req.companyName() != null ? req.companyName().trim() : e.getCompanyName();
-        String newEmail   = req.email() != null ? req.email().trim() : e.getEmail();
+        String newCompany = Optional.ofNullable(req.companyName()).map(String::trim).orElse(e.getCompanyName());
+        String newEmail   = Optional.ofNullable(req.email()).map(String::trim).orElse(e.getEmail());
 
-        // Remove all validation checks (null, blank, format)
-        // Only check for business rule conflicts
         boolean conflictUser = repo.existsByUserIdAndEmailIgnoreCaseAndIdNot(reqUserId, newEmail, id);
         if (conflictUser) {
             log.warn("Email conflict on update | id={}, userId={}, company={}, email={}", id, reqUserId, newCompany, newEmail);
@@ -214,18 +229,19 @@ public class TmsClientServiceImpl {
     // ------------------------------------------------------------------------
 
     /**
-     * Deletes a client if no related records exist.
+     * Delete client by ID.
      *
      * @param id client ID
      */
-    @Transactional
-    public void delete(Integer id) {
+    @Override
+    public void delete(int id) {
         log.debug("Attempting to delete client id={}", id);
-        ClientEntity e = require(id);
-        // boolean hasTE  = timeRepo.existsByClientId(id);
-        // boolean hasInv = invoiceRepo.existsByClientId(id);
-        // boolean hasEst = estimateRepo.existsByClientId(id);
-        // Uncomment and use above if you want to enforce referential integrity
+        ClientEntity e = repo.findById(id).orElseThrow(() -> {
+            log.error("Client not found id={}", id);
+            return new TmsException(HttpStatus.NOT_FOUND, "Client not found");
+        });
+
+        // Referential integrity checks can be re-enabled here if required
         repo.delete(e);
         log.info("Deleted client id={}", id);
     }
@@ -235,15 +251,18 @@ public class TmsClientServiceImpl {
     // ------------------------------------------------------------------------
 
     /**
-     * Archives (deactivates) a client.
+     * Archive (soft deactivate) client by ID.
      *
      * @param id client ID
-     * @return archived client DTO
+     * @return archived {@link TmsClientDto}
      */
-    @Transactional
-    public TmsClientDto archive(Integer id) {
+    @Override
+    public TmsClientDto archive(int id) {
         log.debug("Archiving client id={}", id);
-        ClientEntity e = require(id);
+        ClientEntity e = repo.findById(id).orElseThrow(() -> {
+            log.error("Client not found id={}", id);
+            return new TmsException(HttpStatus.NOT_FOUND, "Client not found");
+        });
         e.setIsActive(false);
         e = repo.save(e);
         log.info("Archived client id={}", id);
@@ -251,15 +270,18 @@ public class TmsClientServiceImpl {
     }
 
     /**
-     * Unarchives (reactivates) a client.
+     * Unarchive (reactivate) client by ID.
      *
      * @param id client ID
-     * @return unarchived client DTO
+     * @return unarchived {@link TmsClientDto}
      */
-    @Transactional
-    public TmsClientDto unarchive(Integer id) {
+    @Override
+    public TmsClientDto unarchive(int id) {
         log.debug("Unarchiving client id={}", id);
-        ClientEntity e = require(id);
+        ClientEntity e = repo.findById(id).orElseThrow(() -> {
+            log.error("Client not found id={}", id);
+            return new TmsException(HttpStatus.NOT_FOUND, "Client not found");
+        });
         e.setIsActive(true);
         e = repo.save(e);
         log.info("Unarchived client id={}", id);
@@ -267,32 +289,26 @@ public class TmsClientServiceImpl {
     }
 
     // ------------------------------------------------------------------------
-    // EXPORT CSV
+    // EXPORT
     // ------------------------------------------------------------------------
 
     /**
-     * Exports client data as a CSV file.
+     * Export clients as CSV file.
      *
      * @param activeFilter "true", "false", or "all"
-     * @param search       search keyword
-     * @return CSV content as byte array
+     * @param search search keyword
+     * @return CSV as byte array
      */
-    @Transactional(readOnly = true)
+    @Override
     public byte[] exportCsv(String activeFilter, String search) {
         log.debug("Generating CSV export | filter={}, search='{}'", activeFilter, search);
 
-        Page<TmsClientDto> page;
-        if ("all".equalsIgnoreCase(activeFilter)) {
-            page = listAll(search, 0, Integer.MAX_VALUE);
-        } else {
-            boolean isActive = Boolean.parseBoolean(activeFilter);
-            page = list(isActive, search, 0, Integer.MAX_VALUE);
-        }
+        Page<TmsClientDto> page = "all".equalsIgnoreCase(activeFilter)
+                ? listAll(search, 0, Integer.MAX_VALUE)
+                : list(Boolean.parseBoolean(activeFilter), search, 0, Integer.MAX_VALUE);
 
-        // CSV Header
         String header = "id,companyName,firstName,lastName,email,isActive\n";
 
-        // CSV Rows
         String rows = page.getContent().stream()
                 .map(c -> String.join(",",
                         String.valueOf(c.id()),
@@ -307,26 +323,12 @@ public class TmsClientServiceImpl {
     }
 
     /**
-     * Escapes nulls and quotes for safe CSV export.
+     * Escape helper for safe CSV export.
+     *
+     * @param s input string
+     * @return CSV-safe string
      */
     private static String safe(String s) {
-        return s == null ? "" : '"' + s.replace("\"", "'") + '"';
-    }
-
-    // ------------------------------------------------------------------------
-    // INTERNAL UTIL
-    // ------------------------------------------------------------------------
-
-    /**
-     * Ensures client exists by ID or throws {@link TmsException} (404).
-     *
-     * @param id client ID
-     * @return client entity
-     */
-    private ClientEntity require(Integer id) {
-        return repo.findById(id).orElseThrow(() -> {
-            log.error("Client not found id={}", id);
-            return new TmsException(HttpStatus.NOT_FOUND, "Client not found");
-        });
+        return s == null ? "" : '\"' + s.replace("\"", "'") + '\"';
     }
 }

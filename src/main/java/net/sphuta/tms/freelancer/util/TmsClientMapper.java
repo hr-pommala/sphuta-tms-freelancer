@@ -6,6 +6,7 @@ import net.sphuta.tms.freelancer.entity.ClientEntity;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.Optional;
 
 /**
  * ==========================================================
@@ -98,13 +99,11 @@ public final class TmsClientMapper {
         applyCommonFields(r, e);
 
         // update userId only when provided (should normally be required and immutable)
-        if (r.userId() != null) {
-            e.setUserId(r.userId());
-        }
-        if (r.sendReminders() != null) e.setSendReminders(r.sendReminders());
-        if (r.chargeLateFees() != null) e.setChargeLateFees(r.chargeLateFees());
-        if (r.allowInvoiceAttachments() != null) e.setAllowInvoiceAttachments(r.allowInvoiceAttachments());
-        if (r.isActive() != null) e.setIsActive(r.isActive());
+        Optional.ofNullable(r.userId()).ifPresent(e::setUserId);
+        Optional.ofNullable(r.sendReminders()).ifPresent(e::setSendReminders);
+        Optional.ofNullable(r.chargeLateFees()).ifPresent(e::setChargeLateFees);
+        Optional.ofNullable(r.allowInvoiceAttachments()).ifPresent(e::setAllowInvoiceAttachments);
+        Optional.ofNullable(r.isActive()).ifPresent(e::setIsActive);
 
         log.info("Updated ClientEntity id={} (email={})", e.getId(), e.getEmail());
     }
@@ -178,20 +177,20 @@ public final class TmsClientMapper {
             return;
         }
 
-        if (r.companyName()   != null) e.setCompanyName(r.companyName());
-        if (r.firstName()     != null) e.setFirstName(r.firstName());
-        if (r.lastName()      != null) e.setLastName(r.lastName());
-        if (r.email()         != null) e.setEmail(r.email());
-        if (r.mobilePhone()   != null) e.setMobilePhone(r.mobilePhone());
-        if (r.businessPhone() != null) e.setBusinessPhone(r.businessPhone());
-        if (r.addressLine1()  != null) e.setAddressLine1(r.addressLine1());
-        if (r.addressLine2()  != null) e.setAddressLine2(r.addressLine2());
-        if (r.city()          != null) e.setCity(r.city());
-        if (r.state()         != null) e.setState(r.state());
-        if (r.postalCode()    != null) e.setPostalCode(r.postalCode());
-        if (r.countryCode()   != null) e.setCountryCode(r.countryCode());
-        if (r.lateFeePercent()!= null) e.setLateFeePercent(r.lateFeePercent());
-        if (r.currencyCode()  != null) e.setCurrencyCode(r.currencyCode());
-        if (r.language()      != null) e.setLanguage(r.language());
+        Optional.ofNullable(r.companyName()).ifPresent(e::setCompanyName);
+        Optional.ofNullable(r.firstName()).ifPresent(e::setFirstName);
+        Optional.ofNullable(r.lastName()).ifPresent(e::setLastName);
+        Optional.ofNullable(r.email()).ifPresent(e::setEmail);
+        Optional.ofNullable(r.mobilePhone()).ifPresent(e::setMobilePhone);
+        Optional.ofNullable(r.businessPhone()).ifPresent(e::setBusinessPhone);
+        Optional.ofNullable(r.addressLine1()).ifPresent(e::setAddressLine1);
+        Optional.ofNullable(r.addressLine2()).ifPresent(e::setAddressLine2);
+        Optional.ofNullable(r.city()).ifPresent(e::setCity);
+        Optional.ofNullable(r.state()).ifPresent(e::setState);
+        Optional.ofNullable(r.postalCode()).ifPresent(e::setPostalCode);
+        Optional.ofNullable(r.countryCode()).ifPresent(e::setCountryCode);
+        Optional.ofNullable(r.lateFeePercent()).ifPresent(e::setLateFeePercent);
+        Optional.ofNullable(r.currencyCode()).ifPresent(e::setCurrencyCode);
+        Optional.ofNullable(r.language()).ifPresent(e::setLanguage);
     }
 }

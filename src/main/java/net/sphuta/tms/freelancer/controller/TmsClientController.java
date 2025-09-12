@@ -94,7 +94,7 @@ public class TmsClientController {
      */
     @Operation(summary = "Get a client by ID")
     @GetMapping("/{id}")
-    public ResponseEntity<TmsApiResponse<TmsClientDto>> get(@PathVariable Integer id) {
+    public ResponseEntity<TmsApiResponse<TmsClientDto>> get(@PathVariable int id) {
         log.debug("Fetching client with id={}", id);
         TmsClientDto dto = service.get(id);
         log.info("Client fetched successfully | id={}", id);
@@ -144,7 +144,7 @@ public class TmsClientController {
     @Operation(summary = "Replace a client (PUT)")
     @PutMapping("/{id}")
     public ResponseEntity<TmsApiResponse<TmsClientDto>> replace(
-            @PathVariable Integer id, @Valid @RequestBody TmsClientDto req) {
+            @PathVariable int id, @Valid @RequestBody TmsClientDto req) {
 
         log.debug("Replacing client id={} with payload={}", id, req);
         TmsClientDto resp = service.update(id, req);
@@ -155,30 +155,6 @@ public class TmsClientController {
         );
     }
 
-    // ------------------------------------------------------------------------
-    // PATCH
-    // ------------------------------------------------------------------------
-
-    /**
-     * Partially update client record.
-     *
-     * @param id  client ID
-     * @param req partial update payload
-     * @return updated client
-     */
-    @Operation(summary = "Patch a client (partial update)")
-    @PatchMapping("/{id}")
-    public ResponseEntity<TmsApiResponse<TmsClientDto>> patch(
-            @PathVariable Integer id, @RequestBody TmsClientDto req) {
-
-        log.debug("Patching client id={} with changes={}", id, req);
-        TmsClientDto resp = service.update(id, req);
-        log.info("Client patched successfully | id={}", id);
-
-        return ResponseEntity.ok(
-                TmsApiResponse.success(HttpStatus.OK, TmsMessages.MSG_CLIENT_PATCHED, resp)
-        );
-    }
 
     // ------------------------------------------------------------------------
     // DELETE
@@ -192,7 +168,7 @@ public class TmsClientController {
      */
     @Operation(summary = "Delete a client")
     @DeleteMapping("/{id}")
-    public ResponseEntity<TmsApiResponse<Void>> delete(@PathVariable Integer id) {
+    public ResponseEntity<TmsApiResponse<Void>> delete(@PathVariable int id) {
         log.debug("Deleting client with id={}", id);
         service.delete(id);
         log.info("Client deleted successfully | id={}", id);
@@ -214,7 +190,7 @@ public class TmsClientController {
      */
     @Operation(summary = "Archive a client")
     @PostMapping("/{id}/archive")
-    public ResponseEntity<TmsApiResponse<TmsClientDto>> archive(@PathVariable Integer id) {
+    public ResponseEntity<TmsApiResponse<TmsClientDto>> archive(@PathVariable int id) {
         log.debug("Archiving client id={}", id);
         TmsClientDto resp = service.archive(id);
         log.info("Client archived successfully | id={}", id);
@@ -232,7 +208,7 @@ public class TmsClientController {
      */
     @Operation(summary = "Unarchive a client")
     @PostMapping("/{id}/unarchive")
-    public ResponseEntity<TmsApiResponse<TmsClientDto>> unarchive(@PathVariable Integer id) {
+    public ResponseEntity<TmsApiResponse<TmsClientDto>> unarchive(@PathVariable int id) {
         log.debug("Unarchiving client id={}", id);
         TmsClientDto resp = service.unarchive(id);
         log.info("Client unarchived successfully | id={}", id);

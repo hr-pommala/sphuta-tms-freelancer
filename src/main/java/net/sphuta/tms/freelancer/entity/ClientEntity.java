@@ -9,6 +9,7 @@ import lombok.Setter;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * ==========================================================
@@ -35,9 +36,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "clients",uniqueConstraints = @UniqueConstraint(
-        name = "uq_clients_company_email_unique",
-        columnNames = {"company_lower", "email_lower"}))
+@Table(name = "clients")
 public class ClientEntity {
 
     // ------------------------------------------------------------------------
@@ -47,7 +46,7 @@ public class ClientEntity {
     /** Auto-generated primary key. */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    private int id;
 
     // ------------------------------------------------------------------------
     // BASIC INFO
@@ -55,7 +54,7 @@ public class ClientEntity {
 
     /** Owner user id FK -> users.id (application enforces FK on DB). */
     @Column(name = "user_id", nullable = false)
-    private Integer userId;
+    private int userId;
 
 
     /** Display name (auto-generated from firstName + lastName). */
@@ -208,11 +207,9 @@ public class ClientEntity {
      * If both are empty, sets {@code name} to null.
      */
     private void generateDisplayName() {
-        if ((firstName != null && !firstName.isBlank()) ||
-                (lastName != null && !lastName.isBlank())) {
-
-            String f = (firstName != null) ? firstName.trim() : "";
-            String l = (lastName != null) ? lastName.trim() : "";
+        String f = Optional.ofNullable(firstName).filter(s -> !s.trim().isEmpty()).map(String::trim).orElse("");
+        String l = Optional.ofNullable(lastName).filter(s -> !s.trim().isEmpty()).map(String::trim).orElse("");
+        if (!f.isEmpty() || !l.isEmpty()) {
             this.name = (f + " " + l).trim();
 
         } else {

@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -117,7 +118,7 @@ public interface TmsClientRepository extends JpaRepository<ClientEntity, Integer
     /**
      * Case-insensitive existence check for company + email excluding an id (used on update).
      */
-    boolean existsByCompanyNameIgnoreCaseAndEmailIgnoreCaseAndIdNot(String companyName, String email, Integer id);
+    boolean existsByCompanyNameIgnoreCaseAndEmailIgnoreCaseAndIdNot(String companyName, String email, int id);
 
     /**
      * Optional lookup for a client by company + email (case-insensitive).
@@ -127,9 +128,9 @@ public interface TmsClientRepository extends JpaRepository<ClientEntity, Integer
     // ---------------------------
     // Per-user uniqueness checks
     // ---------------------------
-    boolean existsByUserIdAndEmailIgnoreCase(Integer userId, String email);
+    boolean existsByUserIdAndEmailIgnoreCase(int userId, String email);
 
-    boolean existsByUserIdAndEmailIgnoreCaseAndIdNot(Integer userId, String email, Integer id);
+    boolean existsByUserIdAndEmailIgnoreCaseAndIdNot(int userId, String email,int id);
 
-    Optional<ClientEntity> findByUserIdAndCompanyNameIgnoreCaseAndEmailIgnoreCase(Integer userId, String companyName, String email);
+    Optional<ClientEntity> findByUserIdAndCompanyNameIgnoreCaseAndEmailIgnoreCase(int userId, String companyName, String email);
 }

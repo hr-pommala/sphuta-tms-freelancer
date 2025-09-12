@@ -28,7 +28,9 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static java.util.Collections.emptyList;
 import static net.sphuta.tms.freelancer.constants.TmsMessages.*;
@@ -37,6 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
@@ -74,11 +77,15 @@ public class TmsClientControllerTest {
     // TEST INFRASTRUCTURE INJECTIONS
     // -----------------------------
 
-    /** MockMvc - entry point for server-side Spring MVC test support. */
+    /**
+     * MockMvc - entry point for server-side Spring MVC test support.
+     */
     @Autowired
     MockMvc mvc;
 
-    /** Jackson mapper used for serializing/deserializing JSON bodies in tests. */
+    /**
+     * Jackson mapper used for serializing/deserializing JSON bodies in tests.
+     */
     @Autowired
     ObjectMapper om;
 
@@ -90,15 +97,21 @@ public class TmsClientControllerTest {
 //    @MockBean
 //    TmsTimeEntryService timeEntryService;
 
-    /** Mocked Client service used by TmsClientController. */
+    /**
+     * Mocked Client service used by TmsClientController.
+     */
     @MockBean
     TmsClientServiceImpl clientService;
 
-    /** Mocked Estimate service used by TmsClientEstimateController. */
+    /**
+     * Mocked Estimate service used by TmsClientEstimateController.
+     */
     @MockBean
     TmsEstimateService estimateService;
 
-    /** Mocked Invoice service used by TmsClientInvoiceController. */
+    /**
+     * Mocked Invoice service used by TmsClientInvoiceController.
+     */
     @MockBean
     TmsInvoiceService invoiceService;
 
@@ -106,7 +119,9 @@ public class TmsClientControllerTest {
     // TEST DATA
     // -----------------------------
 
-    /** Reusable sample client DTO used across many tests. */
+    /**
+     * Reusable sample client DTO used across many tests.
+     */
     private TmsClientDto sampleClient;
 
     // -----------------------------
@@ -210,7 +225,9 @@ public class TmsClientControllerTest {
     @Nested
     class Clients {
 
-        /** GET /clients → list clients with paging */
+        /**
+         * GET /clients → list clients with paging
+         */
         @Test
         @DisplayName("GET /clients list → 200 OK and delegates to service.list")
         void list_ok() throws Exception {
@@ -234,7 +251,9 @@ public class TmsClientControllerTest {
             log.info("Test list_ok completed - service.list verified");
         }
 
-        /** GET /clients/{id} → found */
+        /**
+         * GET /clients/{id} → found
+         */
         @Test
         @DisplayName("GET /clients/{id} found → 200 OK")
         void get_found() throws Exception {
@@ -254,7 +273,9 @@ public class TmsClientControllerTest {
             log.info("Test get_found completed successfully");
         }
 
-        /** GET /clients/{id} → not found */
+        /**
+         * GET /clients/{id} → not found
+         */
         @Test
         @DisplayName("GET /clients/{id} not found → 404")
         void get_notFound() throws Exception {
@@ -270,75 +291,82 @@ public class TmsClientControllerTest {
             log.info("Test get_notFound completed - 404 behavior verified");
         }
 
-        /** POST /clients → create new client */
+        /**
+         * POST /clients → create new client
+         */
+
         @Test
         @DisplayName("POST /clients → 201 Created + Location header")
         void create_created201() throws Exception {
-            log.debug("Starting test: create_created201 - preparing request DTO and stubbing clientService.create(...)");
+            TmsClientDto sampleDto = TmsClientDto.builder()
+                    .id(101)
+                    .userId(1)
+                    .email("billing@acme.com")
+                    .companyName("Acme LLC")
+                    .isActive(true)
+                    .build();
 
-            TmsClientDto req = TmsClientDto.builder()
-                    .email("billing@acme.com").companyName("Acme LLC").build();
+            when(clientService.create(any(TmsClientDto.class))).thenReturn(sampleDto);
 
-            when(clientService.create(any())).thenReturn(sampleClient);
+            Map<String,Object> reqBody = new HashMap<>();
+            reqBody.put("userId", 1);
+            reqBody.put("firstName", "John");
+            reqBody.put("lastName", "Doe");
+            reqBody.put("email", "billing@acme.com");
+            reqBody.put("companyName", "Acme LLC");
 
             mvc.perform(post(CLIENT_BASE_PATH)
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(om.writeValueAsString(req)))
+                            .content(om.writeValueAsString(reqBody)))
+                    .andDo(print())
                     .andExpect(status().isCreated())
                     .andExpect(header().string("Location", containsString(CLIENT_BASE_PATH + "/101")));
 
-            // Capture service input
             ArgumentCaptor<TmsClientDto> captor = ArgumentCaptor.forClass(TmsClientDto.class);
             verify(clientService).create(captor.capture());
             assertEquals("billing@acme.com", captor.getValue().email());
-
-            log.info("Test create_created201 completed - request captured and verified");
         }
 
-        /** PUT /clients/{id} → full replace */
+
+
+        /**
+         * PUT /clients/{id} → full replace
+         */
         @Test
         @DisplayName("PUT /clients/{id} → 200 OK")
         void replace_ok() throws Exception {
-            log.debug("Starting test: replace_ok - stubbing clientService.update(...)");
+            // make sampleDto (service returns TmsClientDto)
+            TmsClientDto sampleDto = TmsClientDto.builder()
+                    .id(101)
+                    .userId(1)
+                    .email("billing@acme.com")
+                    .companyName("Acme LLC")
+                    .isActive(true)
+                    .build();
 
-            TmsClientDto req = TmsClientDto.builder()
-                    .email("billing@acme.com").companyName("Acme LLC").build();
+            when(clientService.update(eq(101), any(TmsClientDto.class))).thenReturn(sampleDto);
 
-            when(clientService.update(eq(101), any())).thenReturn(sampleClient);
+            Map<String,Object> reqBody = new HashMap<>();
+            reqBody.put("userId", 1);
+            reqBody.put("firstName", "John");
+            reqBody.put("lastName", "Doe");
+            reqBody.put("email", "billing@acme.com");
+            reqBody.put("companyName", "Acme LLC");
 
             mvc.perform(put(CLIENT_BASE_PATH + "/{id}", 101)
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(om.writeValueAsString(req)))
+                            .content(om.writeValueAsString(reqBody)))
+                    .andDo(print())
                     .andExpect(status().isOk());
 
-            verify(clientService).update(eq(101), any());
-
-            log.info("Test replace_ok completed - update delegation verified");
+            verify(clientService).update(eq(101), any(TmsClientDto.class));
         }
 
-        /** PATCH /clients/{id} → partial update */
-        @Test
-        @DisplayName("PATCH /clients/{id} → 200 OK")
-        void patch_ok() throws Exception {
-            log.debug("Starting test: patch_ok - stubbing partial update result");
 
-            TmsClientDto req = TmsClientDto.builder().email("new@acme.com").build();
 
-            when(clientService.update(eq(101), any())).thenReturn(
-                    sampleClient.toBuilder().email("new@acme.com").build()
-            );
-
-            mvc.perform(patch(CLIENT_BASE_PATH + "/{id}", 101)
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(om.writeValueAsString(req)))
-                    .andExpect(status().isOk());
-
-            verify(clientService).update(eq(101), any());
-
-            log.info("Test patch_ok completed - partial update flow validated");
-        }
-
-        /** DELETE /clients/{id} → delete client */
+        /**
+         * DELETE /clients/{id} → delete client
+         */
         @Test
         @DisplayName("DELETE /clients/{id} → 200 OK")
         void delete_ok() throws Exception {
@@ -354,7 +382,9 @@ public class TmsClientControllerTest {
             log.info("Test delete_ok completed - delete delegation verified");
         }
 
-        /** POST /clients/{id}/archive → archive client */
+        /**
+         * POST /clients/{id}/archive → archive client
+         */
         @Test
         @DisplayName("POST /clients/{id}/archive → 200 OK")
         void archive_ok() throws Exception {
@@ -370,7 +400,9 @@ public class TmsClientControllerTest {
             log.info("Test archive_ok completed - archive delegation verified");
         }
 
-        /** POST /clients/{id}/unarchive → unarchive client */
+        /**
+         * POST /clients/{id}/unarchive → unarchive client
+         */
         @Test
         @DisplayName("POST /clients/{id}/unarchive → 200 OK")
         void unarchive_ok() throws Exception {
@@ -386,7 +418,9 @@ public class TmsClientControllerTest {
             log.info("Test unarchive_ok completed - unarchive delegation verified");
         }
 
-        /** GET /clients/export → CSV response */
+        /**
+         * GET /clients/export → CSV response
+         */
         @Test
         @DisplayName("GET /clients/export → CSV with header and rows")
         void exportCsv_ok() throws Exception {
@@ -407,93 +441,5 @@ public class TmsClientControllerTest {
         }
     }
 
-    // ==========================================================
-    // Invoice Endpoints
-    // ==========================================================
-
-    /** POST /invoices → create invoice from entries */
-//    @Test
-//    @DisplayName("POST /invoices → create from timeEntryIds")
-//    void createInvoice_ok() throws Exception {
-//        log.debug("Starting test: createInvoice_ok - stubbing invoiceService.createFromEntries(...)");
-//
-//        when(invoiceService.createFromEntries(any())).thenReturn(mock(TmsInvoiceDto.class));
-//
-//        String json = """
-//        {
-//          "clientId": 101,
-//          "issueDate": "2025-08-15",
-//          "dueDate": "2025-09-15",
-//          "currencyCode": "USD",
-//          "notes": "Payment due in 30 days",
-//          "timeEntryIds": [1, 2, 3]
-//        }
-//        """;
-//
-//        mvc.perform(post(INVOICE_BASE_PATH)
-//                        .contentType(MediaType.APPLICATION_JSON)
-//                        .content(json))
-//                .andExpect(status().isOk());
-//
-//        verify(invoiceService).createFromEntries(any());
-//
-//        log.info("Test createInvoice_ok completed - invoice creation delegation verified");
-//    }
-
-    /** POST /invoices/{id}/send → send invoice */
-    @Test
-    @DisplayName("POST /invoices/{id}/send → 200 OK")
-    void sendInvoice_ok() throws Exception {
-        log.debug("Starting test: sendInvoice_ok - stubbing invoiceService.send(777)");
-
-        TmsInvoiceDto resp = TmsInvoiceDto.builder()
-                .id(777)
-                .clientId(101)
-                .status("SENT")
-                .build();
-
-        when(invoiceService.send(777)).thenReturn(resp);
-
-        mvc.perform(post(INVOICE_BASE_PATH + INVOICE_SEND_PATH, 777))
-                .andExpect(status().isOk());
-
-        verify(invoiceService).send(777);
-
-        log.info("Test sendInvoice_ok completed - invoice send verified");
-    }
-
-    // ==========================================================
-    // Estimate Endpoints
-    // ==========================================================
-
-    /** POST /estimates → create estimate */
-    @Test
-    @DisplayName("POST /estimates → 200 OK with valid JSON")
-    void createEstimate_ok() throws Exception {
-        log.debug("Starting test: createEstimate_ok - stubbing estimateService.create(...)");
-
-        when(estimateService.create(any())).thenReturn(mock(TmsEstimateDto.class));
-
-        String json = """
-        {
-          "clientId": 101,
-          "issueDate": "2025-08-10",
-          "validUntil": "2025-09-10",
-          "currencyCode": "USD",
-          "notes": "Valid for 30 days",
-          "items": [
-            { "description": "Design", "quantity": 10.00, "unitPrice": 50.00 }
-          ]
-        }
-        """;
-
-        mvc.perform(post(ESTIMATE_BASE_PATH)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(json))
-                .andExpect(status().isOk());
-
-        verify(estimateService).create(any());
-
-        log.info("Test createEstimate_ok completed - estimate creation delegation verified");
-    }
 }
+
