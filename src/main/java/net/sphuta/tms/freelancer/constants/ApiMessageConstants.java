@@ -123,5 +123,4 @@ public final class ApiMessageConstants {
     /** Message returned when a single invoicing setting is fetched successfully. */
     public static final String MSG_FETCH_SINGLE_SETTING = "Fetched settings successfully";
 
-
 }
