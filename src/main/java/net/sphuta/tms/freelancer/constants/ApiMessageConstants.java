@@ -83,4 +83,45 @@ public final class ApiMessageConstants {
 
     /** Message used when a project is permanently deleted. */
     public static final String PROJECT_DELETED = "Project deleted successfully";
+
+     /* =================================================
+       Default configuration values of Settings invoicing
+       ==================================================== */
+
+    /** Default currency code used for invoicing (ISO 4217 format). */
+    public static final String DEFAULT_CURRENCY = "USD";
+
+    /** Default format string for invoice numbering (year + sequence). */
+    public static final String DEFAULT_INVOICE_FORMAT = "INV-${yyyy}${seq:5}";
+
+    /** Default number of days allowed for payment terms. */
+    public static final int DEFAULT_PAYMENT_TERMS = 14;
+
+    /** Default template identifier for invoice rendering. */
+    public static final String DEFAULT_TEMPLATE_ID = "tmpl_default";
+
+
+    /* ===============================================
+       API response messages of Settings invoicing
+       =============================================*/
+
+    /** Message returned when invoicing settings are not found. */
+    public static final String MSG_SETTINGS_NOT_FOUND = "Invoicing settings not found";
+
+    /** Message returned when invoicing settings are successfully created. */
+    public static final String MSG_SETTINGS_CREATED = "Settings created successfully";
+
+    /** Message returned when invoicing settings are successfully updated. */
+    public static final String MSG_SETTINGS_UPDATED = "Settings updated successfully";
+
+    /** Message returned when invoicing settings are successfully deleted. */
+    public static final String MSG_SETTINGS_DELETED = "Settings deleted successfully";
+
+    /** Message returned when all invoicing settings are fetched. */
+    public static final String MSG_FETCH_ALL_SETTINGS = "Fetched all settings";
+
+    /** Message returned when a single invoicing setting is fetched successfully. */
+    public static final String MSG_FETCH_SINGLE_SETTING = "Fetched settings successfully";
+
+
 }
