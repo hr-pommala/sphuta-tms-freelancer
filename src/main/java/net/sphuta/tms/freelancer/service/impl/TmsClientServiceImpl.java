@@ -6,6 +6,7 @@ import net.sphuta.tms.freelancer.dto.TmsClientDto;
 import net.sphuta.tms.freelancer.entity.ClientEntity;
 import net.sphuta.tms.freelancer.exception.TmsException;
 import net.sphuta.tms.freelancer.repository.*;
+import net.sphuta.tms.freelancer.service.TmsClientService;
 import net.sphuta.tms.freelancer.util.TmsClientMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
