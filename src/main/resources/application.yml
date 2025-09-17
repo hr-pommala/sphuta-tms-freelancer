@@ -31,3 +31,18 @@ springdoc:
   swagger-ui:
     enabled: true
     path: /swagger-ui.html       # Swagger UI available at http://localhost:8080/swagger-ui.html
+
+
+  datasource:
+    url: jdbc:h2:mem:authdb;DB_CLOSE_DELAY=-1
+    driverClassName: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+jwt:
+  secret: verysecret_jwt_key_for_dev_change_me
+  expirationMs: 3600000
