@@ -2,6 +2,7 @@ package net.sphuta.tms.freelancer.security;
 
 import lombok.RequiredArgsConstructor;
 import net.sphuta.tms.freelancer.repository.UserRepository;
+import net.sphuta.tms.freelancer.repository.RevokedTokenRepository;
 import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -26,6 +27,7 @@ public class SecurityConfig {
 
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
+    private final RevokedTokenRepository revokedTokenRepository; // injected revoked token repo
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -79,7 +81,8 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
         );
 
-        http.addFilterBefore(new JwtAuthFilter(jwtUtil), UsernamePasswordAuthenticationFilter.class);
+        // pass the revokedTokenRepository to the JwtAuthFilter so it can check revoked tokens
+        http.addFilterBefore(new JwtAuthFilter(jwtUtil, revokedTokenRepository), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
