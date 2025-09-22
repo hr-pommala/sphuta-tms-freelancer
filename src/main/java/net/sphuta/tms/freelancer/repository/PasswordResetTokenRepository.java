@@ -1,5 +1,6 @@
 package net.sphuta.tms.freelancer.repository;
 
+
 import net.sphuta.tms.freelancer.entity.PasswordResetToken;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;

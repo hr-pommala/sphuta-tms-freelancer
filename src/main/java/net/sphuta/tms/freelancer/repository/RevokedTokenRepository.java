@@ -10,4 +10,3 @@ public interface RevokedTokenRepository extends JpaRepository<RevokedToken, Long
     Optional<RevokedToken> findByToken(String token);
     void deleteByExpiryBefore(java.time.Instant cutoff);
 }
- 

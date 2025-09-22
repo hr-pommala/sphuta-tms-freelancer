@@ -1,5 +1,4 @@
 package net.sphuta.tms.freelancer.entity;
-
 import jakarta.persistence.*;
 import lombok.*;
 

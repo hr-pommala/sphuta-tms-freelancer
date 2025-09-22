@@ -45,5 +45,5 @@ springdoc:
     show-sql: true
 
 jwt:
-  secret: 89d85a13-8184-4642-a34e-47b224710b13
+  secret: verysecret_jwt_key_for_dev_change_me
   expirationMs: 3600000
