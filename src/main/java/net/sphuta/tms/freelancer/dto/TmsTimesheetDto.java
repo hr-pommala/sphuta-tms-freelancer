@@ -22,7 +22,7 @@ public record TmsTimesheetDto(
 
         @NotNull
         @Schema(example = "501", description = "Project ID for creating timesheet", accessMode = Schema.AccessMode.READ_WRITE)
-        int projectId,
+        Integer projectId,
 
         @NotNull
         @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
@@ -37,7 +37,7 @@ public record TmsTimesheetDto(
         // ---------------- RESPONSE FIELDS ----------------
 
         @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-        int timesheetId,
+        Integer timesheetId,
 
         @JsonProperty(access = JsonProperty.Access.READ_ONLY)
         String projectName,

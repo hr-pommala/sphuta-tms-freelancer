@@ -73,6 +73,13 @@ public class ProjectEntity {
     private ClientEntity clientEntity;
 
     /**
+     * NEW: owner user id (denormalized). Nullable.
+     */
+    @Column(name = "user_id")
+    private Integer userId;
+
+
+    /**
      * Project name (required).
      * Limited to 255 characters.
      */

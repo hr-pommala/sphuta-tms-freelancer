@@ -4,6 +4,15 @@ import org.springframework.stereotype.Component;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * <h2>TmsUserMessagesConfig</h2>
+ *
+ * Configuration class for managing user-related messages in the TMS application.
+ * <p>
+ * This class provides a centralized way to define and retrieve messages associated
+ * with user operations such as creation, retrieval, updating, and deletion.
+ * </p>
+ */
 @Component
 public class TmsUserMessagesConfig {
     private final Map<String, String> userMessages;

@@ -4,6 +4,7 @@ spring:
     username: root
     password: root
   jpa:
+    show-sql: true            # Log SQL statements
     hibernate:
       ddl-auto: update           # Automatically creates/updates schema (dev use only, avoid in prod)
     properties:
@@ -44,5 +45,5 @@ springdoc:
     show-sql: true
 
 jwt:
-  secret: verysecret_jwt_key_for_dev_change_me
+  secret: 89d85a13-8184-4642-a34e-47b224710b13
   expirationMs: 3600000

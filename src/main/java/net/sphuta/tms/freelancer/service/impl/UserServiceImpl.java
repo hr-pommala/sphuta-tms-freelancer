@@ -1,7 +1,6 @@
 package net.sphuta.tms.freelancer.service.impl;
 
 
-
 import lombok.RequiredArgsConstructor;
 import net.sphuta.tms.freelancer.dto.AuthRequests;
 import net.sphuta.tms.freelancer.dto.AuthResponses;
@@ -58,7 +57,7 @@ public class UserServiceImpl implements UserService {
     public AuthResponses.JwtResponse login(String emailOrUsername, String password) {
         var opt = userRepo.findByEmail(emailOrUsername);
         if (opt.isEmpty()) opt = userRepo.findByUsername(emailOrUsername);
-        var user = opt.orElseThrow(() -> new IllegalArgumentException("User doesn't exist"));
+        var user = opt.orElseThrow(() -> new IllegalArgumentException("Email doesn't exist"));
         if (!passwordEncoder.matches(password, user.getPasswordHash())) throw new IllegalArgumentException("Invalid credentials");
         String token = jwtUtil.generateToken(user.getEmail(), user.getRoles());
         return new AuthResponses.JwtResponse(token,"Bearer", user.getFirstName() + " " + Optional.ofNullable(user.getLastName()).orElse(""), user.getEmail());

@@ -33,9 +33,17 @@ public class TimeEntryEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
 
+    // NEW: project_id (denormalized for faster queries / UI needs)
+    @Column(name = "project_id", nullable = false)
+    private Integer projectId;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "timesheet_id", nullable = false)
     private TimesheetEntity timesheet;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "task_id")
+    private TaskEntity task;
 
 
     @Column(name = "entry_date", nullable = false)

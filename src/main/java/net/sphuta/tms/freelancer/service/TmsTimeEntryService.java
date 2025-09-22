@@ -1,7 +1,10 @@
 package net.sphuta.tms.freelancer.service;
 
 import net.sphuta.tms.freelancer.dto.TimeEntryDto;
+import net.sphuta.tms.freelancer.entity.TimeEntryEntity;
+import net.sphuta.tms.freelancer.entity.TimesheetEntity;
 
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -35,4 +38,10 @@ public interface TmsTimeEntryService {
      */
     List<TimeEntryDto> getAll();
 
+    /**
+     * Find all entries belonging to any of the provided timesheets and
+     * with entryDate between start and end (inclusive).
+     *
+     * Spring Data JPA derived query — will be implemented automatically.
+     */
 }

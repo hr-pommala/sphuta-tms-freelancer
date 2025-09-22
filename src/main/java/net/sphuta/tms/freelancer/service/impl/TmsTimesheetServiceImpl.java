@@ -1,18 +1,18 @@
 package net.sphuta.tms.freelancer.service.impl;
 
+import io.swagger.v3.oas.annotations.Operation;
 import lombok.extern.slf4j.Slf4j;
 import net.sphuta.tms.freelancer.dto.BulkUpsertDto;
 import net.sphuta.tms.freelancer.dto.TimeEntryDto;
 import net.sphuta.tms.freelancer.dto.TmsTimesheetDto;
+import net.sphuta.tms.freelancer.entity.ProjectEntity;
 import net.sphuta.tms.freelancer.entity.TimeEntryEntity;
 import net.sphuta.tms.freelancer.entity.TimesheetEntity;
 import net.sphuta.tms.freelancer.enums.TimesheetStatus;
 import net.sphuta.tms.freelancer.exception.ApiExceptions;
 import net.sphuta.tms.freelancer.exception.ConflictException;
 import net.sphuta.tms.freelancer.exception.NotFoundException;
-import net.sphuta.tms.freelancer.repository.TmsProjectRepository;
-import net.sphuta.tms.freelancer.repository.TmsTimeEntryRepository;
-import net.sphuta.tms.freelancer.repository.TmsTimesheetRepository;
+import net.sphuta.tms.freelancer.repository.*;
 import net.sphuta.tms.freelancer.service.TmsTimesheetService;
 import net.sphuta.tms.freelancer.util.TmsTimesheetMappers;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,62 +20,226 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.OffsetTime;
+import java.time.temporal.TemporalAdjusters;
+import java.util.*;
 
 /**
- * Implementation of {@link TmsTimesheetService} for managing Timesheets.
- * <p>
- * Provides business logic for creating, retrieving, submitting,
- * bulk-upserting, and locking timesheets. All database operations
- * are wrapped in transactional boundaries.
- * </p>
+ * Service implementation for Timesheets.
+ *
+ * Responsibilities:
+ * - Create / fetch / submit / delete timesheets
+ * - Bulk upsert time entries
+ * - Provide weekly and monthly aggregated views (per-project)
+ *
+ * Notes:
+ * - Weekly/monthly endpoints return per-project objects with:
+ *   { projectName, timesheetID, timeentries: [{date,hours,taskId,taskName}], status }
+ *
+ * - The repository method findByTimesheetInAndEntryDateBetween(...) must eagerly fetch the
+ *   task association (left join fetch) so taskId/taskName are available inside the transaction.
  */
 @Slf4j
 @Service
 @Transactional
 public class TmsTimesheetServiceImpl implements TmsTimesheetService {
 
-    /** Repository for Timesheet entities */
     @Autowired
     private TmsTimesheetRepository timesheetRepo;
 
-    /** Repository for Time Entry entities */
     @Autowired
     private TmsTimeEntryRepository entryRepo;
 
-    /**
-     * Repository used only for existence check of projects.
-     * Replace with your actual project client/repository if needed.
-     */
     @Autowired
     private TmsProjectRepository projectRepository;
 
+    @Autowired
+    private TmsUserRepository userRepository;
+
+    @Autowired
+    private TaskRepository taskRepository;
+
+
     /**
-     * Create a new timesheet for a project and period.
+     * Build a {@link TimeEntryEntity} from a {@link TimeEntryDto} and parent {@link TimesheetEntity}.
      *
-     * @param req DTO containing project and period details
-     * @return created {@link TmsTimesheetDto}
+     * - If the request includes taskId, attempt to resolve the TaskEntity and attach it.
+     * - Cost is computed from rateAtEntry * hours when rate is present.
+     *
+     * @param t the parent TimesheetEntity
+     * @param r the incoming TimeEntryDto
+     * @return built (but not yet persisted) TimeEntryEntity
      */
+    private TimeEntryEntity buildEntryFromReq(TimesheetEntity t, TimeEntryDto r) {
+        var cost = Optional.ofNullable(r.rateAtEntry()).map(rate -> rate.multiply(r.hours())).orElse(null);
+
+        TimeEntryEntity.TimeEntryEntityBuilder b = TimeEntryEntity.builder()
+                .timesheet(t)
+                .projectId(t.getProjectId())
+                .entryDate(r.entryDate())
+                .description(r.description())
+                .hours(r.hours())
+                .rateAtEntry(r.rateAtEntry())
+                .costAtEntry(cost);
+
+        // If a taskId is provided in request, try to resolve and attach TaskEntity (lenient: if not found, leave null)
+        if (r.taskId() != null) {
+            var task = taskRepository.findById(r.taskId()).orElse(null);
+            b.task(task);
+            if (task == null) {
+                log.debug("buildEntryFromReq: taskId={} not found; creating entry without task", r.taskId());
+            } else {
+                log.debug("buildEntryFromReq: attached taskId={} name={} to new entry", task.getId(), task.getTaskName());
+            }
+        }
+
+        var entry = b.build();
+        log.debug("Built TimeEntryEntity for timesheetId={} projectId={} date={} hours={} cost={}",
+                t.getId(), t.getProjectId(), r.entryDate(), r.hours(), cost);
+        return entry;
+    }
+
+
+    // -------------------------------------------------------------------------
+    // Helper: total hours for a timesheet
+    // -------------------------------------------------------------------------
+    private BigDecimal computeTotalHours(TimesheetEntity t) {
+        BigDecimal total = t.getEntries().stream()
+                .map(TimeEntryEntity::getHours)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        log.debug("Computed totalHours={} for timesheetId={}", total, t.getId());
+        return total;
+    }
+
+    /**
+     * Build a day-by-day list spanning start..end inclusive.
+     *
+     * Each row contains exactly: { date (yyyy-MM-dd), hours (BigDecimal), taskId (Integer|null), taskName (String|null) }.
+     *
+     * This version is defensive when reading e.getTask() (catches proxy/lazy exceptions)
+     * and logs the concrete entries read so you can debug why tasks may be null.
+     */
+    private List<Map<String, Object>> buildDailyEntryList(List<TimeEntryEntity> entries, LocalDate start, LocalDate end) {
+        log.debug("buildDailyEntryList: building range {}..{} with {} DB entries", start, end, entries == null ? 0 : entries.size());
+
+        // quick debug: log each entry and whether task is present (helps to confirm fetch behavior)
+        if (entries != null && !entries.isEmpty()) {
+            for (TimeEntryEntity ent : entries) {
+                try {
+                    var task = ent.getTask(); // may be proxy
+                    log.debug("entry id={} date={} hours={} taskPresent={} taskId={}",
+                            ent.getId(), ent.getEntryDate(), ent.getHours(),
+                            task != null, task != null ? task.getId() : null);
+                } catch (RuntimeException ex) {
+                    // safe log if proxy cannot be initialized here
+                    log.debug("entry id={} date={} hours={} task: cannot access (proxy) -> {}", ent.getId(), ent.getEntryDate(), ent.getHours(), ex.toString());
+                }
+            }
+        }
+
+        // group by date
+        Map<LocalDate, List<TimeEntryEntity>> byDate = new TreeMap<>();
+        for (TimeEntryEntity e : Optional.ofNullable(entries).orElse(List.of())) {
+            // guard if entryDate is null
+            if (e.getEntryDate() == null) {
+                log.debug("buildDailyEntryList: skipping entry id={} with null entryDate", e.getId());
+                continue;
+            }
+            byDate.computeIfAbsent(e.getEntryDate(), d -> new ArrayList<>()).add(e);
+        }
+
+        List<Map<String, Object>> rows = new ArrayList<>();
+        LocalDate cursor = start;
+        while (!cursor.isAfter(end)) {
+            List<TimeEntryEntity> dayEntries = byDate.getOrDefault(cursor, List.of());
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("date", cursor.toString());
+
+            if (dayEntries.isEmpty()) {
+                row.put("hours", BigDecimal.ZERO);
+                row.put("taskId", null);
+                row.put("taskName", null);
+                log.trace("buildDailyEntryList: date={} -> no entries (zero-row)", cursor);
+            } else {
+                BigDecimal total = BigDecimal.ZERO;
+                Integer chosenTaskId = null;
+                String chosenTaskName = null;
+                boolean multipleTasks = false;
+
+                for (TimeEntryEntity e : dayEntries) {
+                    total = total.add(Optional.ofNullable(e.getHours()).orElse(BigDecimal.ZERO));
+
+                    // Read task defensively: some JPA providers may throw when accessing a lazy proxy
+                    Integer tid = null;
+                    String tname = null;
+                    try {
+                        var t = e.getTask();
+                        if (t != null) {
+                            tid = t.getId();
+                            tname = t.getTaskName();
+                        }
+                    } catch (RuntimeException ex) {
+                        // Could not access the task (proxy or other issue) — treat as no task
+                        log.debug("buildDailyEntryList: unable to access task for entryId={} -> {}", e.getId(), ex.toString());
+                    }
+
+                    if (tid != null) {
+                        if (chosenTaskId == null) {
+                            chosenTaskId = tid;
+                            chosenTaskName = tname;
+                        } else if (!Objects.equals(chosenTaskId, tid)) {
+                            multipleTasks = true;
+                        }
+                    } else {
+                        // entry without task while another entry had a task -> ambiguous
+                        if (chosenTaskId != null) {
+                            multipleTasks = true;
+                        }
+                    }
+                }
+
+                row.put("hours", total);
+                if (multipleTasks) {
+                    row.put("taskId", null);
+                    row.put("taskName", null);
+                    log.trace("buildDailyEntryList: date={} -> multiple/ambiguous tasks; hours={}", cursor, total);
+                } else {
+                    row.put("taskId", chosenTaskId);
+                    row.put("taskName", chosenTaskName);
+                    log.trace("buildDailyEntryList: date={} -> chosenTaskId={} hours={}", cursor, chosenTaskId, total);
+                }
+            }
+
+            rows.add(row);
+            cursor = cursor.plusDays(1);
+        }
+
+        log.debug("buildDailyEntryList: built {} rows for range {}..{}", rows.size(), start, end);
+        return rows;
+    }
+
+    // -------------------------------------------------------------------------
+    // Standard CRUD / bulk methods (unchanged behaviour)
+    // -------------------------------------------------------------------------
     @Override
+    @Operation(summary = "Create timesheet", description = "Create a new timesheet for the given project and period.")
     public TmsTimesheetDto create(TmsTimesheetDto req) {
         log.info("Request received to create timesheet: projectId={}, periodStart={}, periodEnd={}",
                 req.projectId(), req.periodStart(), req.periodEnd());
 
-        // Validate period consistency
         if (req.periodEnd().isBefore(req.periodStart())) {
             log.error("Validation failed: periodEnd={} is before periodStart={}", req.periodEnd(), req.periodStart());
             throw new ApiExceptions.ValidationException("periodEnd must be >= periodStart");
         }
 
-        // NEW: verify project exists (throw if not)
         if (Optional.ofNullable(req.projectId()).filter(projectRepository::existsById).isEmpty()) {
             log.error("Project not found: projectId={}", req.projectId());
             throw new NotFoundException("Project not found");
         }
 
-        // Check for duplicate timesheet
         timesheetRepo.findByProjectIdAndPeriodStartAndPeriodEnd(req.projectId(), req.periodStart(), req.periodEnd())
                 .ifPresent(t -> {
                     log.error("Conflict: Timesheet already exists for projectId={} period {}..{}",
@@ -83,7 +247,6 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
                     throw new ConflictException("Timesheet for project & period already exists");
                 });
 
-        // Build and save new timesheet entity
         TimesheetEntity t = TimesheetEntity.builder()
                 .projectId(req.projectId())
                 .periodStart(req.periodStart())
@@ -98,13 +261,8 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
         return TmsTimesheetMappers.toDetail(t);
     }
 
-    /**
-     * Retrieve a timesheet by ID with its details.
-     *
-     * @param id timesheet identifier
-     * @return {@link TmsTimesheetDto} with entries and totals
-     */
     @Override
+    @Transactional(readOnly = true)
     public TmsTimesheetDto get(int id) {
         log.info("Fetching timesheet by id={}", id);
 
@@ -114,20 +272,11 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
                     return new NotFoundException("Timesheet not found");
                 });
 
-        // Force load entries from lazy collection
-        log.debug("Loading entries for timesheet id={}", id);
+        // force load entries
         t.getEntries().size();
-
-        log.info("Successfully fetched timesheet id={} with {} entries", id, t.getEntries().size());
         return TmsTimesheetMappers.toDetail(t);
     }
 
-    /**
-     * Submit a timesheet for approval.
-     *
-     * @param id timesheet identifier
-     * @return updated {@link TmsTimesheetDto} with APPROVED status
-     */
     @Override
     public TmsTimesheetDto submit(int id) {
         log.info("Submitting timesheet id={} for approval", id);
@@ -139,45 +288,28 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
                 });
 
         t.setStatus(TimesheetStatus.APPROVED);
-        log.info("Timesheet approved: id={} status={}", id, t.getStatus());
+        log.info("Timesheet submitted: id={} status={}", id, t.getStatus());
 
         return TmsTimesheetMappers.toDetail(t);
     }
 
-    /**
-     * Bulk upsert time entries in a timesheet.
-     *
-     * <p>This method inserts or updates time entries for a given timesheet.</p>
-     * <ul>
-     *   <li>Validates request payload (date range, hours > 0)</li>
-     *   <li>Checks if the timesheet exists and is mutable</li>
-     *   <li>Decides whether to insert or update each entry</li>
-     *   <li>Returns a response DTO with operation summary</li>
-     * </ul>
-     *
-     * @param timesheetId timesheet identifier
-     * @param req DTO containing entries and mode (UPSERT, INSERT_ONLY, UPDATE_ONLY)
-     * @return {@link BulkUpsertDto} containing inserted/updated counts and processed entries
-     */
     @Override
+    @Operation(summary = "Bulk upsert entries", description = "Insert or update multiple entries in a timesheet.")
     public BulkUpsertDto bulkUpsert(int timesheetId, BulkUpsertDto req) {
         log.info("Bulk upsert requested: timesheetId={}, rows={}",
                 timesheetId, (req.entries() == null ? 0 : req.entries().size()));
 
-        // If request has no entries, log and return an empty response
         if (Optional.ofNullable(req.entries()).filter(entries -> !entries.isEmpty()).isEmpty()) {
             log.warn("No entries provided for bulk upsert");
             return TmsTimesheetMappers.toBulkUpsertResponse(List.of(), req.mode(), 0, 0, 0, BigDecimal.ZERO);
         }
 
-        // Fetch the timesheet or throw NOT_FOUND exception
         var t = timesheetRepo.findById(timesheetId)
                 .orElseThrow(() -> {
                     log.error("Timesheet not found: id={}", timesheetId);
                     return new NotFoundException("Timesheet not found");
                 });
 
-        // Check mutability of timesheet
         if (!t.getStatus().isMutable()) {
             log.error("Timesheet is LOCKED and cannot be modified: id={}", timesheetId);
             throw new ConflictException("Timesheet is LOCKED and cannot be modified");
@@ -186,111 +318,84 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
         int inserted = 0, updated = 0;
         List<TimeEntryDto> processed = new ArrayList<>();
 
-        // Process each incoming request entry
         for (var r : req.entries()) {
-            log.debug("Processing entry: date={}, desc='{}', hours={}, rate={}",
-                    r.entryDate(), r.description(), r.hours(), r.rateAtEntry());
+            log.debug("Processing entry: date={}, desc='{}', hours={}, rate={}, taskId={}",
+                    r.entryDate(), r.description(), r.hours(), r.rateAtEntry(), r.taskId());
 
-            // Validation: entry must be within period range
+            // validate date within timesheet period
             if (r.entryDate().isBefore(t.getPeriodStart()) || r.entryDate().isAfter(t.getPeriodEnd())) {
                 log.warn("Validation failed: entry outside period. entry={}, period={}..{}",
                         r.entryDate(), t.getPeriodStart(), t.getPeriodEnd());
                 throw new ApiExceptions.ValidationException("Some entries invalid: outside period");
             }
 
-            // Validation: hours must be > 0
+            // validate hours > 0
             if (Optional.ofNullable(r.hours()).filter(h -> h.compareTo(BigDecimal.ZERO) > 0).isEmpty()) {
                 log.warn("Validation failed: entry with invalid hours. entry={}", r);
                 throw new ApiExceptions.ValidationException("Some entries invalid: hours must be > 0");
             }
 
-            // Lookup existing entry by (timesheetId + entryDate + description)
-            var existing = entryRepo.findByTimesheetAndEntryDateAndDescription(
-                    t, r.entryDate(), r.description()).orElse(null);
+            // check existing by timesheet + date + description
+            var existing = entryRepo.findByTimesheetAndEntryDateAndDescription(t, r.entryDate(), r.description()).orElse(null);
 
-            if (Optional.ofNullable(existing).isEmpty()) {
-                // INSERT path
+            if (existing == null) {
+                // Insert path: build entity (buildEntryFromReq will attach task if taskId present)
                 var e = buildEntryFromReq(t, r);
                 entryRepo.save(e);
+                // keep in-memory timesheet entries synced
                 t.getEntries().add(e);
                 inserted++;
+
+                // Map saved entity to DTO (mapper will read task safely)
                 processed.add(TmsTimesheetMappers.toTimeEntryDto(e));
-                log.info("Inserted new entry: date={}, desc='{}', hours={}, rate={}",
-                        r.entryDate(), r.description(), r.hours(), r.rateAtEntry());
+                log.info("Inserted new entry: id={} date={} desc='{}' hours={} rate={} taskId={}",
+                        e.getId(), e.getEntryDate(), e.getDescription(), e.getHours(), e.getRateAtEntry(),
+                        e.getTask() != null ? e.getTask().getId() : null);
             } else {
-                // UPDATE path
+                // Update path: update fields
                 existing.setHours(r.hours());
                 existing.setRateAtEntry(r.rateAtEntry());
                 existing.setCostAtEntry(Optional.ofNullable(r.rateAtEntry()).map(rate -> rate.multiply(r.hours())).orElse(null));
+                // ensure projectId remains in sync (defensive)
+                existing.setProjectId(t.getProjectId());
+
+                // If request contains taskId (non-null), resolve and set the task (this allows changing task)
+                if (r.taskId() != null) {
+                    var task = taskRepository.findById(r.taskId()).orElse(null);
+                    existing.setTask(task); // if task==null this will clear the association
+                    if (task == null) {
+                        log.debug("bulkUpsert: update - taskId={} not found; entry id={} will have task=null", r.taskId(), existing.getId());
+                    } else {
+                        log.debug("bulkUpsert: update - attached taskId={} to entry id={}", task.getId(), existing.getId());
+                    }
+                }
+                // explicitly save updated entity so changes are flushed/persisted
+                entryRepo.save(existing);
+
                 updated++;
                 processed.add(TmsTimesheetMappers.toTimeEntryDto(existing));
-                log.info("Updated existing entry: id={}, date={}, desc='{}', newHours={}, newRate={}",
-                        existing.getId(), r.entryDate(), r.description(), r.hours(), r.rateAtEntry());
+                log.info("Updated existing entry: id={} date={} desc='{}' newHours={} newRate={} taskId={}",
+                        existing.getId(), r.entryDate(), r.description(), r.hours(), r.rateAtEntry(),
+                        existing.getTask() != null ? existing.getTask().getId() : null);
             }
         }
 
-        // Compute total hours after all operations
-        BigDecimal total = TmsTimesheetMappers.totalHours(t);
-        log.debug("Total hours recomputed for timesheetId={} -> {}", timesheetId, total);
-
-        // Build response DTO
+        BigDecimal total = computeTotalHours(t);
         var response = TmsTimesheetMappers.toBulkUpsertResponse(processed, req.mode(), inserted, updated, 0, total);
-        log.info("Bulk upsert completed: timesheetId={}, inserted={}, updated={}, totalHours={}",
-                timesheetId, inserted, updated, total);
+        log.info("Bulk upsert completed: timesheetId={} inserted={} updated={} totalHours={}", timesheetId, inserted, updated, total);
 
         return response;
     }
 
 
-    /**
-     * Build {@link TimeEntryEntity} from request DTO.
-     *
-     * @param t Timesheet entity
-     * @param r Time entry DTO
-     * @return populated {@link TimeEntryEntity}
-     */
-    private TimeEntryEntity buildEntryFromReq(TimesheetEntity t, TimeEntryDto r) {
-        var cost = Optional.ofNullable(r.rateAtEntry()).map(rate -> rate.multiply(r.hours())).orElse(null);
-        var entry = TimeEntryEntity.builder()
-                .timesheet(t)
-                .entryDate(r.entryDate())
-                .description(r.description())
-                .hours(r.hours())
-                .rateAtEntry(r.rateAtEntry())
-                .costAtEntry(cost)
-                .build();
-
-        log.debug("Built TimeEntryEntity for timesheetId={} date={} hours={} cost={}",
-                t.getId(), r.entryDate(), r.hours(), cost);
-        return entry;
-    }
-
-    /**
-     * Retrieve all timesheets (non-paged).
-     *
-     * Maps TimesheetEntity -> TmsTimesheetDto using TmsTimesheetMappers.toDetail.
-     */
     @Override
+    @Transactional(readOnly = true)
     public List<TmsTimesheetDto> getAll() {
         log.info("Service: fetching all timesheets");
-
-        // fetch all entities
         var allEntities = timesheetRepo.findAll();
-
-        log.info("Service: found {} timesheets", allEntities.size());
-
-        var timesheet = TmsTimesheetMappers.toTimesheetResponseList(allEntities);
-        return timesheet;
+        return TmsTimesheetMappers.toTimesheetResponseList(allEntities);
     }
 
-    /**
-     * Delete a timesheet by id.
-     *
-     * Business logic:
-     * - Ensure timesheet exists; otherwise throw NotFoundException.
-     * - Delete associated time entries first to avoid FK/cascade issues (safer).
-     * - Delete the timesheet entity.
-     */
     @Override
     public void delete(int id) {
         log.info("Service: deleting timesheet id={}", id);
@@ -300,20 +405,156 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
             return new NotFoundException("Timesheet not found");
         });
 
-        // Defensive: delete entries belonging to this timesheet explicitly (avoids FK constraint issues if cascade not configured)
         var entries = ts.getEntries();
         Optional.ofNullable(entries)
                 .filter(e -> !e.isEmpty())
                 .ifPresent(e -> {
-                    log.debug("Service: deleting {} entries for timesheet id={}", e.size(), id);
                     entryRepo.deleteAll(e);
                     ts.getEntries().clear();
                 });
 
-        // Now delete the timesheet
         timesheetRepo.delete(ts);
-
         log.info("Service: timesheet deleted id={}", id);
     }
 
+    // -------------------------------------------------------------------------
+    // Weekly / Monthly retrievals (RETURN FORMAT CHANGED)
+    // -------------------------------------------------------------------------
+    @Override
+    @Transactional(readOnly = true)
+    public Map<Integer, Map<String, Object>> getWeeklyTimeEntries(String userEmail) {
+        var user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new NotFoundException("User not found: " + userEmail));
+
+        LocalDate today = LocalDate.now();
+        LocalDate weekStart = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        LocalDate weekEnd = weekStart.plusDays(6);
+
+        log.info("getWeeklyTimeEntries email={} week {}..{}", userEmail, weekStart, weekEnd);
+        return getTimeEntriesForUserForRange(user.getEmail(), weekStart, weekEnd);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<Integer, Map<String, Object>> getMonthlyTimeEntries(String userEmail) {
+        var user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new NotFoundException("User not found: " + userEmail));
+
+        LocalDate today = LocalDate.now();
+        LocalDate monthStart = today.with(TemporalAdjusters.firstDayOfMonth());
+        LocalDate monthEnd = today.with(TemporalAdjusters.lastDayOfMonth());
+
+        log.info("getMonthlyTimeEntries email={} month {}..{}", userEmail, monthStart, monthEnd);
+        return getTimeEntriesForUserForRange(user.getEmail(), monthStart, monthEnd);
+    }
+
+    /**
+     * Helper: aggregate time entries across projects for a user in a date range.
+     *
+     * The returned map keyed by projectId contains:
+     * - projectName (String)
+     * - timesheetID (Integer | null)  // latest timesheet overlapping range
+     * - status (String)                // timesheet status or "NONE"
+     * - timeentries (List of {date,hours,taskId,taskName})  // one row per calendar day in range
+     *
+     * @param userEmail user's email
+     * @param rangeStart inclusive start
+     * @param rangeEnd inclusive end
+     * @return map keyed by projectId
+     */
+    @Transactional(readOnly = true)
+    private Map<Integer, Map<String, Object>> getTimeEntriesForUserForRange(String userEmail,
+                                                                            LocalDate rangeStart,
+                                                                            LocalDate rangeEnd) {
+        var user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new NotFoundException("User not found: " + userEmail));
+
+        log.debug("Building project entries for email={} range {}..{}", userEmail, rangeStart, rangeEnd);
+
+        List<ProjectEntity> projects = projectRepository.findByUserId(user.getId());
+        Map<Integer, Map<String, Object>> result = new LinkedHashMap<>();
+
+        for (ProjectEntity p : projects) {
+            int projectId = p.getId();
+            Map<String, Object> projectMap = new LinkedHashMap<>();
+            projectMap.put("projectName", p.getName());
+            projectMap.put("status", "NONE");
+            projectMap.put("timesheetID", null);
+
+            // find overlapping timesheets for the requested range
+            List<TimesheetEntity> timesheets = timesheetRepo.findByProjectIdAndPeriodOverlapping(projectId, rangeStart, rangeEnd);
+
+            // Attempt to get the latest timesheet (if any) to supply status/timesheetID
+            TimesheetEntity latest = null;
+            if (!timesheets.isEmpty()) {
+                latest = timesheets.stream()
+                        .max(Comparator.comparing(TimesheetEntity::getPeriodStart))
+                        .orElse(timesheets.get(0));
+                projectMap.put("status", latest.getStatus() != null ? latest.getStatus().name() : "UNKNOWN");
+                projectMap.put("timesheetID", latest.getId());
+            }
+
+            // Fetch entries (repo uses left join fetch to eagerly load task)
+            List<TimeEntryEntity> entries = entryRepo.findByTimesheetInAndEntryDateBetween(timesheets, rangeStart, rangeEnd);
+
+            // Build day-by-day rows (one per calendar day in range) with task info when available
+            List<Map<String, Object>> entryRows = buildDailyEntryList(entries, rangeStart, rangeEnd);
+
+            projectMap.put("timeentries", entryRows);
+            log.debug("Project id={} -> mapped {} day-rows (status={}, timesheetID={})",
+                    projectId, entryRows.size(), projectMap.get("status"), projectMap.get("timesheetID"));
+
+            result.put(projectId, projectMap);
+        }
+
+        log.info("getTimeEntriesForUserForRange: completed for user={} projectsCount={}", userEmail, result.size());
+        return result;
+    }
+
+    // -------------------------------------------------------------------------
+    // Per-project range retrieval (unchanged behaviour)
+    // -------------------------------------------------------------------------
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> getTimeEntriesByProject(int projectId, LocalDate start, LocalDate end) {
+        log.info("getTimeEntriesByProject projectId={} range {}..{}", projectId, start, end);
+
+        if (end.isBefore(start)) {
+            throw new IllegalArgumentException("end must be >= start");
+        }
+
+        if (!projectRepository.existsById(projectId)) {
+            throw new NotFoundException("Project not found: " + projectId);
+        }
+
+        List<TimesheetEntity> timesheets = timesheetRepo.findByProjectIdAndPeriodOverlapping(projectId, start, end);
+        log.debug("Found {} timesheets for project {}", timesheets.size(), projectId);
+
+        Map<String, Object> projectMap = new LinkedHashMap<>();
+        projectRepository.findById(projectId).ifPresent(p -> projectMap.put("projectName", p.getName()));
+        projectMap.put("status", "NONE");
+        projectMap.put("timeentries", new LinkedHashMap<String, BigDecimal>());
+
+        if (!timesheets.isEmpty()) {
+            TimesheetEntity latest = timesheets.stream()
+                    .max(Comparator.comparing(TimesheetEntity::getPeriodStart))
+                    .orElse(timesheets.get(0));
+            projectMap.put("status", latest.getStatus() != null ? latest.getStatus().name() : "UNKNOWN");
+
+            List<TimeEntryEntity> entries = entryRepo.findByTimesheetInAndEntryDateBetween(timesheets, start, end);
+
+            LinkedHashMap<String, BigDecimal> dayMap = new LinkedHashMap<>();
+            for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
+                dayMap.put(d.toString(), BigDecimal.ZERO);
+            }
+            for (TimeEntryEntity e : entries) {
+                String day = e.getEntryDate().toString();
+                dayMap.put(day, dayMap.getOrDefault(day, BigDecimal.ZERO)
+                        .add(Optional.ofNullable(e.getHours()).orElse(BigDecimal.ZERO)));
+            }
+            projectMap.put("timeentries", dayMap);
+        }
+
+        return projectMap;
+    }
 }

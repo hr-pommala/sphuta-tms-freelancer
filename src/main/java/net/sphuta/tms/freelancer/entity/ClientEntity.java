@@ -54,7 +54,7 @@ public class ClientEntity {
 
     /** Owner user id FK -> users.id (application enforces FK on DB). */
     @Column(name = "user_id", nullable = false)
-    private int userId;
+    private Integer userId;
 
 
     /** Display name (auto-generated from firstName + lastName). */
