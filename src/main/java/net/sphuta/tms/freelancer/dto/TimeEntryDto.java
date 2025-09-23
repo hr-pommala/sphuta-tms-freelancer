@@ -19,7 +19,7 @@ public record TimeEntryDto(
 
         @NotNull(message = "Timesheet ID is required")
         @Schema(example = "101", description = "Target timesheet ID", accessMode = Schema.AccessMode.WRITE_ONLY)
-        int timesheetId,
+        Integer timesheetId,
 
         @NotNull(message = "Entry date is required")
         @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
@@ -40,11 +40,20 @@ public record TimeEntryDto(
         @Schema(example = "65.00", description = "Hourly rate snapshot at the time of entry", accessMode = Schema.AccessMode.WRITE_ONLY)
         BigDecimal rateAtEntry,
 
+        @Schema(description = "Associated task id (optional) - include in request to attach a task", example = "2", accessMode = Schema.AccessMode.READ_WRITE)
+        Integer taskId,
+
+        @Schema(description = "Associated task name (populated in responses)", example = "React Components", accessMode = Schema.AccessMode.READ_ONLY)
+        String taskName,
+
+
+
         // -------- RESPONSE FIELDS --------
 
         @Schema(description = "Unique identifier of the time entry", example = "501", accessMode = Schema.AccessMode.READ_ONLY)
-        int id,
+        Integer id,
 
         @Schema(description = "Total cost calculated at entry (hours × rateAtEntry)", example = "260.00", accessMode = Schema.AccessMode.READ_ONLY)
         BigDecimal costAtEntry
+
 ) {}

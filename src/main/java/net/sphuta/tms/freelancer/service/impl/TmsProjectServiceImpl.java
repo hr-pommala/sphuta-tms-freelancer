@@ -136,6 +136,7 @@ public class TmsProjectServiceImpl implements TmsProjectService {
                 .endDate(in.endDate())
                 .description(in.description())
                 .active(Boolean.TRUE.equals(in.isActive()))
+                .userId(client.getUserId()) // ✅ copy owner userId
                 .build();
 
         // Persist the project entity
@@ -168,6 +169,11 @@ public class TmsProjectServiceImpl implements TmsProjectService {
 
         // Delegate field updates to mapper
         TmsProjectMapper.applyUpdate(project, in, client);
+
+        // ✅ Sync userId from the linked client
+        if (project.getClientEntity() != null) {
+            project.setUserId(project.getClientEntity().getUserId());
+        }
 
         // Date validation (same rule as create)
         if (Optional.ofNullable(project.getStartDate()).isPresent()

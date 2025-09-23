@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
+
 /**
  * Repository interface for {@link ProjectEntity} entities.
  *
@@ -36,6 +38,13 @@ public interface TmsProjectRepository extends JpaRepository<ProjectEntity, Integ
 
     /**
      * Finds projects by active flag, client, and a search term across name, code, and description.
+     * The search is case-insensitive and matches partial terms.
+     * The results are paginated.
+     * @param active   the active status to filter by
+     * @param clientId the client ID to filter by
+     * @param search   the search term to look for in name, code, or description
+     * @param pageable pagination information
+     * @return a page of matching ProjectEntity objects
      */
     @Query("""
            SELECT p FROM ProjectEntity p
@@ -55,6 +64,12 @@ public interface TmsProjectRepository extends JpaRepository<ProjectEntity, Integ
 
     /**
      * Finds projects by active flag and a search term across name, code, and description.
+     * The search is case-insensitive and matches partial terms.
+     * The results are paginated.
+     * @param active   the active status to filter by
+     * @param search   the search term to look for in name, code, or description
+     * @param pageable pagination information
+     * @return a page of matching ProjectEntity objects
      */
     @Query("""
            SELECT p FROM ProjectEntity p
@@ -81,4 +96,7 @@ public interface TmsProjectRepository extends JpaRepository<ProjectEntity, Integ
      */
     Page<ProjectEntity> findByActiveAndNameContainingIgnoreCase(
             boolean active, String name, Pageable pageable);
+
+    List<ProjectEntity> findByUserId(int userId);
+
 }

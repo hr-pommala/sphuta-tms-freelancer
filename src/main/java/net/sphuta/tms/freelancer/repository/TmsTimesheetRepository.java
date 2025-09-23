@@ -5,8 +5,11 @@ import net.sphuta.tms.freelancer.enums.TimesheetStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -57,4 +60,14 @@ public interface TmsTimesheetRepository extends JpaRepository<TimesheetEntity, I
      * @return a {@link Page} of timesheets matching the status
      */
     Page<TimesheetEntity> findByStatus(TimesheetStatus status, Pageable pageable);
+
+/**
+        * Find timesheets for a project that overlap the given range [start, end].
+            * Overlap condition: timesheet.periodStart <= end AND timesheet.periodEnd >= start
+     */
+    @Query("SELECT t FROM TimesheetEntity t WHERE t.projectId = :projectId AND t.periodStart <= :end AND t.periodEnd >= :start")
+    List<TimesheetEntity> findByProjectIdAndPeriodOverlapping(@Param("projectId") int projectId,
+                                                              @Param("start") LocalDate start,
+                                                              @Param("end") LocalDate end);
 }
+

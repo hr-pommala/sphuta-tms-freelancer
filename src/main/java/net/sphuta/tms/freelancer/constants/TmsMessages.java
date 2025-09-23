@@ -118,4 +118,22 @@ public final class TmsMessages {
             "HTTP POST /invoices/{}/send";
     public static final String LOG_INVOICE_SENT_SUCCESS =
             "Invoice {} sent (status={}, {} ms)";
+
+    // ---------------- Task messages ----------------
+    /** Base API path for task-related endpoints */
+
+    /** Message displayed when a task is successfully created */
+    public static final String ENTITIES_CREATED = "Task created successfully";
+
+    /** Message displayed when a task is successfully updated */
+    public static final String ENTITIES_UPDATED = "Task updated successfully";
+
+    /** Message displayed when a task is successfully fetched */
+    public static final String ENTITY_FETCHED   = "Task fetched successfully";
+
+    /** Message displayed when all tasks are successfully fetched */
+    public static final String ENTITIES_FETCHED  = "Tasks fetched successfully";
+
+    /** Message displayed when a task is successfully deleted */
+    public static final String ENTITY_DELETED   = "Task deleted successfully";
 }

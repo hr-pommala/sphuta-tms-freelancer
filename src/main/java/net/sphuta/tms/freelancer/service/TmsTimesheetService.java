@@ -1,8 +1,11 @@
 package net.sphuta.tms.freelancer.service;
 
 import net.sphuta.tms.freelancer.dto.*;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Service interface for managing Timesheets in the Freelancer Timesheet Management System.
@@ -59,5 +62,15 @@ public interface TmsTimesheetService {
      * @param id unique identifier of the timesheet
      */
     void delete(int id);
+
+
+    @Transactional(readOnly = true)
+    Map<Integer, Map<String, Object>> getWeeklyTimeEntries(String userEmail);
+
+    @Transactional(readOnly = true)
+    Map<Integer, Map<String, Object>> getMonthlyTimeEntries(String userEmail);
+
+    // Project specific:
+    Map<String, Object> getTimeEntriesByProject(int projectId, LocalDate start, LocalDate end);
 
 }

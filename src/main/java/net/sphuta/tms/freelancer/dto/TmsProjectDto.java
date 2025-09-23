@@ -32,6 +32,13 @@ public record TmsProjectDto(
         @NotNull(groups = {Create.class}, message = "clientId must not be null")
         Integer clientId,
 
+        /**
+         * NEW: Denormalized owner user id copied from the client (response only).
+         */
+        @Schema(description = "Owner user id (copied from client)", accessMode = Schema.AccessMode.READ_ONLY)
+        Integer userId,
+
+
         /** Human-readable project name. Required on create. */
         @NotBlank(groups = {Create.class}, message = "projectName must not be blank")
         String projectName,
