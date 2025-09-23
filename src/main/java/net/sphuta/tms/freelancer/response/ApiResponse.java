@@ -22,6 +22,14 @@ public record ApiResponse<T>(
         LocalDateTime timestamp
 ) {
     /**
+     * Derived status string for backward compatibility in tests and clients.
+     * Returns "success" if success=true, else "error".
+     */
+    public String status() {
+        return success ? "success" : "error";
+    }
+
+    /**
      * Static factory method for success responses.
      */
     public static <T> ApiResponse<T> success(String message, T data) {

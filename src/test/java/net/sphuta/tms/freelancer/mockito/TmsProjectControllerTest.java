@@ -10,6 +10,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.domain.Page;
@@ -40,6 +41,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * </p>
  */
 @WebMvcTest(controllers = TmsProjectController.class)
+@AutoConfigureMockMvc(addFilters = false)  // ✅ disables Spring Security filters in MockMvc
 class TmsProjectControllerTest {
 
     /** MockMvc simulates HTTP requests and validates controller responses */
@@ -175,9 +177,10 @@ class TmsProjectControllerTest {
         var created = sampleProjectDto(201, true);
 
         var requestBody = new TmsProjectDto(
-                0, // id (primitive) - use 0 for create instead of null
-                null, // client (server fills for response)
-                1,
+                0,      // id (server-assigned)
+                null,   // client (response only)
+                1,      // clientId
+                null,   // userId (response only, filled by server)
                 "Backend API",
                 "ACME-BE",
                 new BigDecimal("65.00"),
@@ -212,19 +215,15 @@ class TmsProjectControllerTest {
     void put_ok() throws Exception {
         int id = 301;
 
-        // Expected response after update
         var updated = new TmsProjectDto(
                 id,
-                // fixed: use builder for TmsClientDto to avoid canonical-ctor mismatch
                 TmsClientDto.builder()
                         .id(1)
                         .userId(1)
-                        .email(null)
                         .companyName("Acme LLC")
-                        .firstName(null)
-                        .lastName(null)
                         .build(),
-                1,
+                1,      // clientId
+                1,      // userId (response only)
                 "Backend API v2",
                 "ACME-BE",
                 new BigDecimal("70.00"),
@@ -236,11 +235,11 @@ class TmsProjectControllerTest {
                 "2025-08-25T18:20:00Z"
         );
 
-        // Full request body
         var body = new TmsProjectDto(
                 id,
-                null, // client ignored in request
+                null,
                 1,
+                null,   // userId ignored in request
                 "Backend API v2",
                 "ACME-BE",
                 new BigDecimal("70.00"),
@@ -252,7 +251,6 @@ class TmsProjectControllerTest {
                 null
         );
 
-        // Updated to match new service signature (no boolean flag)
         Mockito.when(service.updateProject(eq(id), Mockito.any(TmsProjectDto.class)))
                 .thenReturn(updated);
 
@@ -337,15 +335,13 @@ class TmsProjectControllerTest {
         var client = TmsClientDto.builder()
                 .id(1)
                 .userId(1)
-                .email(null)
                 .companyName("Acme LLC")
-                .firstName(null)
-                .lastName(null)
                 .build();
         return new TmsProjectDto(
                 id != null ? id : 0,
                 client,
                 client.id(),
+                client.userId(), // userId added in response
                 "Backend API",
                 "ACME-BE",
                 new BigDecimal("65.00"),
