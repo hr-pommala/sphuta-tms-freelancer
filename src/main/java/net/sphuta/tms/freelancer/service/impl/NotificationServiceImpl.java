@@ -20,13 +20,24 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Implementation of the NotificationService interface.
+ * Provides methods to list, create, and acknowledge notifications.
+ */
 @Service
 public class NotificationServiceImpl implements NotificationService {
+
 
     private final NotificationRepository repo;
     private final JwtUtil jwtUtil;
     private final String ackBaseUrlFormat;
-
+/*
+     * Constructs a NotificationServiceImpl with the specified repository, JWT utility, and acknowledgment URL format.
+     *
+     * @param repo               the NotificationRepository for database operations
+     * @param jwtUtil            the JwtUtil for token generation and parsing
+     * @param ackBaseUrlFormat   the base URL format for acknowledgment links
+     */
     public NotificationServiceImpl(NotificationRepository repo,
                                    JwtUtil jwtUtil,
                                    @Value("${app.notifications.ack-base-url:/api/v1/users/%d/notifications/_/ack?t=%s}") String ackBaseUrlFormat) {
@@ -35,6 +46,15 @@ public class NotificationServiceImpl implements NotificationService {
         this.ackBaseUrlFormat = ackBaseUrlFormat;
     }
 
+    /**
+     * Lists notifications for a user with optional filtering for unread only, and supports pagination.
+     *
+     * @param userId     the ID of the user
+     * @param unreadOnly if true, only unread notifications are returned
+     * @param limit      the maximum number of notifications to return
+     * @param offset     the offset from which to start returning notifications
+     * @return a NotificationListResponse containing the notifications and their counts
+     */
     @Override
     @Transactional(readOnly = true)
     public NotificationListResponse listNotifications(long userId, boolean unreadOnly, int limit, int offset) {
@@ -59,6 +79,11 @@ public class NotificationServiceImpl implements NotificationService {
         return new NotificationListResponse(new NotificationCount(total, unread), dtoItems);
     }
 
+/**     * Creates a new notification from the provided request.
+     *
+     * @param req the NotificationCreateRequest containing the notification details
+     * @return the ID of the created notification
+     */
     @Override
     @Transactional
     public Long createNotification(NotificationCreateRequest req) {
@@ -67,6 +92,12 @@ public class NotificationServiceImpl implements NotificationService {
         return saved.getId();
     }
 
+/**     * Acknowledges (marks as read) a single notification using the provided token.
+     *
+     * @param userId the ID of the user
+     * @param token  the acknowledgment token
+     * @return an AckResult containing the number of updated notifications and the count of unread notifications after the update
+     */
     @Override
     @Transactional
     public AckResult ackNotification(long userId, String token) {
@@ -94,6 +125,11 @@ public class NotificationServiceImpl implements NotificationService {
         }
     }
 
+/**     * Marks all notifications as read for the specified user.
+     *
+     * @param userId the ID of the user
+     * @return an AckResult containing the number of updated notifications and the count of unread notifications after the update
+     */
     @Override
     @Transactional
     public AckResult markAllRead(long userId) {

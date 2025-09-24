@@ -2,6 +2,9 @@ package net.sphuta.tms.freelancer.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import net.sphuta.tms.freelancer.enums.NotificationCategory;
+import net.sphuta.tms.freelancer.enums.NotificationStatus;
+
 import java.time.OffsetDateTime;
 
 @Entity

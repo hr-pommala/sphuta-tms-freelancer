@@ -3,8 +3,8 @@ package net.sphuta.tms.freelancer.util;
 import net.sphuta.tms.freelancer.dto.NotificationCreateRequest;
 import net.sphuta.tms.freelancer.dto.NotificationItem;
 import net.sphuta.tms.freelancer.entity.Notification;
-import net.sphuta.tms.freelancer.entity.NotificationCategory;
-import net.sphuta.tms.freelancer.entity.NotificationStatus;
+import net.sphuta.tms.freelancer.enums.NotificationCategory;
+import net.sphuta.tms.freelancer.enums.NotificationStatus;
 
 /**
  * Simple mapper for Notification entity <-> DTOs.

@@ -28,7 +28,9 @@ public class NotificationController {
     public NotificationController(NotificationService svc) {
         this.svc = svc;
     }
-
+/** * List notifications for user, with optional filtering for unread only, pagination via limit/offset.
+     * Example: GET /api/v1/users/123/notifications?unreadOnly=true&limit=10&offset=0
+     */
     @GetMapping
     public ResponseEntity<NotificationListResponse> listNotifications(
             @PathVariable("userId") long userId,
@@ -39,7 +41,10 @@ public class NotificationController {
         NotificationListResponse resp = svc.listNotifications(userId, unreadOnly, limit, offset);
         return ResponseEntity.ok(resp);
     }
-
+/* * Create a new notification for user.
+     * Example: POST /api/v1/users/123/notifications
+     * Body: { "userId": 123, "title": "...", "message": "...", "priority": 1 }
+     */
     @PostMapping
     public ResponseEntity<Map<String, Object>> createNotification(
             @PathVariable("userId") long userId,
@@ -52,7 +57,9 @@ public class NotificationController {
         Long id = svc.createNotification(request);
         return ResponseEntity.ok(Map.of("id", id));
     }
-
+/** * Acknowledge (mark as read) a single notification using token.
+     * Example: POST /api/v1/users/123/notifications/_/ack?t=...
+     */
     @PostMapping("/_/ack")
     public ResponseEntity<Map<String, Object>> ackSingle(
             @PathVariable("userId") long userId,
@@ -61,7 +68,9 @@ public class NotificationController {
         AckResult r = svc.ackNotification(userId, token);
         return ResponseEntity.ok(Map.of("updated", r.updated(), "unread", r.unread()));
     }
-
+/** * Mark all notifications as read for user.
+     * Example: POST /api/v1/users/123/notifications:read-all
+     */
     @PostMapping(path = "/read-all")
     public ResponseEntity<Map<String, Object>> markAllRead(@PathVariable("userId") long userId) {
         AckResult r = svc.markAllRead(userId);
