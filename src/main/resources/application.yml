@@ -47,3 +47,13 @@ springdoc:
 jwt:
   secret: verysecret_jwt_key_for_dev_change_me
   expirationMs: 3600000
+
+# Notification configuration (used by notification service / ack token behavior)
+app:
+  notifications:
+    # Format string used to build ack URLs in API responses.
+    # It should contain two format specifiers: %d -> userId, %s -> ack token
+    ack-base-url: "/api/v1/users/%d/notifications/_/ack?t=%s"
+
+    # TTL for ack tokens (in seconds). Default value here is 24 hours (86400).
+    token-ttl-seconds: 86400
