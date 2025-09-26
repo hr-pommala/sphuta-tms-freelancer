@@ -101,7 +101,14 @@ public class TmsTimesheetMappers {
             log.trace("toTimeEntryDto: entryId={} task not available (null or not initialised)", e.getId());
         }
 
+        // derive project name (if you have a relation or service to fetch it)
+        String projectName = null;
+        if (e.getProjectId() != null) {
+            projectName = " " + e.getProjectId();
+            // if you have ProjectEntity relation: projectName = e.getProject().getName();
+        }
         // IMPORTANT: Constructor order matches TimeEntryDto record definition
+
         return new TimeEntryDto(
                 e.getTimesheet() != null ? e.getTimesheet().getId() : null,
                 e.getEntryDate(),
@@ -111,7 +118,9 @@ public class TmsTimesheetMappers {
                 taskId,
                 taskName,
                 e.getId(),
-                e.getCostAtEntry()
+                e.getCostAtEntry(),
+                projectName
+
         );
     }
 
@@ -195,7 +204,10 @@ public class TmsTimesheetMappers {
                             e.taskId(),
                             e.taskName(),
                             Optional.ofNullable(e.id()).orElse(-1),
-                            computedCost
+                            computedCost,
+                            e.projectName()
+
+
                     );
                 })
                 .toList();
@@ -322,4 +334,5 @@ public class TmsTimesheetMappers {
         log.debug("toDailyCompactRows: built {} rows for range {}..{}", rows.size(), start, end);
         return rows;
     }
+
 }
