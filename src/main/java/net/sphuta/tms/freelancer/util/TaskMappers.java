@@ -40,6 +40,7 @@ public class TaskMappers {
         TaskEntity entity = TaskEntity.builder()
                 .taskName(d.taskName())
                 .description(d.description())
+                .projectId(d.projectId())   // <-- set writable FK
                 .project(project)
                 .build();
         log.trace("Mapped TaskEntity: {}", entity);

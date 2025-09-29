@@ -37,8 +37,8 @@ public class TaskEntity {
     private int id;
 
     // foreign key to projects table
-    @Column(name = "project_id", nullable = false,insertable = false, updatable = false)
-    private int projectId;
+    @Column(name = "project_id", nullable = false)
+    private Integer projectId;
 
     @Column(name = "task_name", nullable = false, length = 255)
     private String taskName;
@@ -55,7 +55,7 @@ public class TaskEntity {
     private OffsetDateTime updatedDt;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "project_id", nullable = false)
+    @JoinColumn(name = "project_id", nullable = false, insertable = false, updatable = false)
     @OnDelete(action = OnDeleteAction.CASCADE)
     private ProjectEntity project;
 
