@@ -16,7 +16,8 @@ import net.sphuta.tms.freelancer.util.TmsTimesheetMappers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import net.sphuta.tms.freelancer.entity.ProjectEntity;
+import net.sphuta.tms.freelancer.repository.TmsProjectRepository;
 import java.math.BigDecimal;
 import java.time.OffsetTime;
 import java.util.List;
@@ -49,6 +50,8 @@ public class TmsTimeEntryServiceImpl implements TmsTimeEntryService {
     @Autowired
     private TaskRepository taskRepository;
 
+    @Autowired
+    private TmsProjectRepository projectRepository;
     /**
      * Creates a new {@link TimeEntryEntity} under an existing {@link TimesheetEntity}.
      *

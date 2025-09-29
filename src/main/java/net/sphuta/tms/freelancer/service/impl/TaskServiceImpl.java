@@ -58,13 +58,15 @@ public class TaskServiceImpl implements TaskService {
         log.debug("Task create request payload: {}", dto);
 
         // verify project exists
-        if (dto.projectId() == null || !projectRepository.existsById(dto.projectId())) {
+//        if (dto.projectId() == null || !projectRepository.existsById(dto.projectId())) {
+        ProjectEntity project = projectRepository.findById(dto.projectId())
+                .orElseThrow(() ->{
             log.error("Project not found while creating task, projectId={}", dto.projectId());
             throw new NotFoundException("Project not found: " + dto.projectId());
-        }
+        });
 
-        TaskEntity e = TaskMappers.fromDto(dto);
-        e.setProjectId(dto.projectId());
+        TaskEntity e = TaskMappers.fromDto(dto, project);
+
         taskRepository.save(e);
 
         log.info("Task created successfully id={} projectId={}", e.getId(), e.getProjectId());

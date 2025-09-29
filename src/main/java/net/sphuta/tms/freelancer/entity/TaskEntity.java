@@ -4,7 +4,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
-
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 import java.time.OffsetDateTime;
 
 /**
@@ -36,7 +37,7 @@ public class TaskEntity {
     private int id;
 
     // foreign key to projects table
-    @Column(name = "project_id", nullable = false)
+    @Column(name = "project_id", nullable = false,insertable = false, updatable = false)
     private int projectId;
 
     @Column(name = "task_name", nullable = false, length = 255)
@@ -52,4 +53,11 @@ public class TaskEntity {
     @UpdateTimestamp
     @Column(name = "updated_dt", nullable = false)
     private OffsetDateTime updatedDt;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "project_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    private ProjectEntity project;
+
+
 }

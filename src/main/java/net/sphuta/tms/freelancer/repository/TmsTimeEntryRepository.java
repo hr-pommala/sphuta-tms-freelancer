@@ -1,5 +1,6 @@
 package net.sphuta.tms.freelancer.repository;
 
+import net.sphuta.tms.freelancer.entity.TaskEntity;
 import net.sphuta.tms.freelancer.entity.TimeEntryEntity;
 import net.sphuta.tms.freelancer.entity.TimesheetEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -72,4 +73,26 @@ public interface TmsTimeEntryRepository extends JpaRepository<TimeEntryEntity, I
             @Param("start") LocalDate start,
             @Param("end") LocalDate end
     );
+    /**
+     * Derived query that matches by timesheet + entryDate + task entity.
+     * Useful when you have a managed TaskEntity instance.
+
+
+     */
+    @Query("select e from TimeEntryEntity e where e.timesheet = :timesheet and e.entryDate = :entryDate and e.task = :task")
+    Optional<TimeEntryEntity> findByTimesheetAndEntryDateAndTask(@Param("timesheet") TimesheetEntity timesheet,
+                                                                 @Param("entryDate") LocalDate entryDate,
+                                                                 @Param("task") TaskEntity task);
+
+    /**
+     * Derived query that matches by timesheet + entryDate + task id.
+     * Use this when you only have a taskId (no TaskEntity instance).
+*/
+    Optional<TimeEntryEntity> findByTimesheetAndEntryDateAndTask_Id(
+            TimesheetEntity timesheet,
+            LocalDate entryDate,
+            Integer taskId
+    );
+    // Optional<TimeEntryEntity> findByTimesheetAndEntryDateAndTask_Id(TimesheetEntity timesheet, LocalDate entryDate, Integer taskId);
+    Optional<TimeEntryEntity> findByTimesheetAndEntryDateAndDescriptionIgnoreCase(TimesheetEntity timesheet, LocalDate entryDate, String description);
 }
