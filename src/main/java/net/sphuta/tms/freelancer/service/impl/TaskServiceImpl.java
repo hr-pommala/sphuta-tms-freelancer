@@ -57,21 +57,28 @@ public class TaskServiceImpl implements TaskService {
         log.info("Attempting to create a new task for projectId={}", dto.projectId());
         log.debug("Task create request payload: {}", dto);
 
-        // verify project exists
-//        if (dto.projectId() == null || !projectRepository.existsById(dto.projectId())) {
+        // verify project exists and load it
         ProjectEntity project = projectRepository.findById(dto.projectId())
-                .orElseThrow(() ->{
-            log.error("Project not found while creating task, projectId={}", dto.projectId());
-            throw new NotFoundException("Project not found: " + dto.projectId());
-        });
+                .orElseThrow(() -> {
+                    log.error("Project not found while creating task, projectId={}", dto.projectId());
+                    return new NotFoundException("Project not found: " + dto.projectId());
+                });
 
-        TaskEntity e = TaskMappers.fromDto(dto, project);
+        // map dto -> entity (this will set projectId on entity)
+        TaskEntity toSave = TaskMappers.fromDto(dto, project);
 
-        taskRepository.save(e);
+        // save and use returned instance
+        TaskEntity saved = taskRepository.save(toSave);
 
-        log.info("Task created successfully id={} projectId={}", e.getId(), e.getProjectId());
-        return TaskMappers.toDto(e);
+        log.info("Task created successfully id={} projectId={}", saved.getId(), saved.getProjectId());
+
+        // OPTIONAL: attach project for serialization if your toDto reads nested project fields (not required here)
+        saved.setProject(project);
+
+        // convert saved entity to dto and return
+        return TaskMappers.toDto(saved);
     }
+
 
     /** Update an existing task
      * Validates that the task exists
