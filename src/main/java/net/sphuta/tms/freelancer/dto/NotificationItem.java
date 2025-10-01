@@ -11,6 +11,6 @@ public record NotificationItem(
         String notification_description,
         String action_url,
         Integer priority,
-        boolean is_read,
-        String ack_url
+        boolean is_read
+//        String ack_url
 ) {}

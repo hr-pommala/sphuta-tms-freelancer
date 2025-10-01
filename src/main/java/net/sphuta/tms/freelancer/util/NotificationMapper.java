@@ -7,8 +7,7 @@ import net.sphuta.tms.freelancer.enums.NotificationCategory;
 import net.sphuta.tms.freelancer.enums.NotificationStatus;
 
 /**
- * Simple mapper for Notification entity <-> DTOs.
- * Static methods keep it simple to use from services.
+ * Mapper for Notification entity <-> DTOs.
  */
 public final class NotificationMapper {
 
@@ -31,7 +30,7 @@ public final class NotificationMapper {
                 .build();
     }
 
-    public static NotificationItem toDto(Notification n, String ackUrl) {
+    public static NotificationItem toDto(Notification n) {
         return new NotificationItem(
                 n.getId(),
                 n.getTitle(),
@@ -39,8 +38,7 @@ public final class NotificationMapper {
                 n.getNotificationDescription(),
                 n.getActionUrl(),
                 n.getPriority(),
-                n.isRead(),
-                ackUrl
+                n.isRead()
         );
     }
 }
