@@ -2,6 +2,7 @@ package net.sphuta.tms.freelancer.util;
 
 import lombok.extern.slf4j.Slf4j;
 import net.sphuta.tms.freelancer.dto.TaskDto;
+import net.sphuta.tms.freelancer.entity.ProjectEntity;
 import net.sphuta.tms.freelancer.entity.TaskEntity;
 
 import java.util.List;
@@ -34,12 +35,13 @@ public class TaskMappers {
         return dto;
     }
 
-    public static TaskEntity fromDto(TaskDto d) {
+    public static TaskEntity fromDto(TaskDto d, ProjectEntity project) {
         log.debug("Mapping TaskDto to TaskEntity: {}", d);
         TaskEntity entity = TaskEntity.builder()
-                .projectId(d.projectId())
                 .taskName(d.taskName())
                 .description(d.description())
+                .projectId(d.projectId())   // <-- set writable FK
+                .project(project)
                 .build();
         log.trace("Mapped TaskEntity: {}", entity);
         return entity;

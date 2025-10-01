@@ -21,12 +21,19 @@ import java.util.List;
 @Entity
 @Table(
         name = "time_entries",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uq_timeentry_timesheet_date_task_project",
+                        columnNames = {"timesheet_id", "entry_date", "task_id", "project_id"}
+                )
+        },
         indexes = {
 //                @Index(name = "idx_te_client", columnList = "client_id"),
 //                @Index(name = "idx_te_invoice", columnList = "invoice_id"),
                 @Index(name = "idx_te_date", columnList = "entry_date")
         }
 )
+
 public class TimeEntryEntity {
 
     @Id

@@ -54,6 +54,10 @@ public record TimeEntryDto(
         Integer id,
 
         @Schema(description = "Total cost calculated at entry (hours × rateAtEntry)", example = "260.00", accessMode = Schema.AccessMode.READ_ONLY)
-        BigDecimal costAtEntry
+        BigDecimal costAtEntry,
+
+        // add where response fields are declared (READ_ONLY)
+        @Schema(description = "Project name (response only)", accessMode = Schema.AccessMode.READ_ONLY)
+        String projectName
 
 ) {}
