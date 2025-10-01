@@ -27,14 +27,14 @@ public class NotificationController {
         this.svc = svc;
     }
 
-    /** List notifications for user (always includes counts). */
+    /** List unread notifications for user (with counts). */
     @GetMapping("/users/{userId}/notifications")
     public ResponseEntity<NotificationListResponse> listNotifications(
             @PathVariable("userId") long userId,
             @RequestParam(value = "limit", defaultValue = "20") int limit,
             @RequestParam(value = "offset", defaultValue = "0") int offset
     ) {
-        NotificationListResponse resp = svc.listNotifications(userId, limit, offset);
+        NotificationListResponse resp = svc.listUnreadNotifications(userId, limit, offset);
         return ResponseEntity.ok(resp);
     }
 
@@ -55,7 +55,7 @@ public class NotificationController {
     @PostMapping("/notifications/{notificationId}/read")
     public ResponseEntity<String> markOneRead(@PathVariable("notificationId") long notificationId) {
         svc.markOneRead(notificationId);
-        return ResponseEntity.ok("Notification " + notificationId + " marked as read");
+        return ResponseEntity.ok().build();
     }
 
     /** Mark all notifications as read (all users). */

@@ -5,7 +5,7 @@ import net.sphuta.tms.freelancer.dto.NotificationListResponse;
 
 public interface NotificationService {
 
-    NotificationListResponse listNotifications(long userId, int limit, int offset);
+    NotificationListResponse listUnreadNotifications(long userId, int limit, int offset);
 
     Long createNotification(NotificationCreateRequest req);
 

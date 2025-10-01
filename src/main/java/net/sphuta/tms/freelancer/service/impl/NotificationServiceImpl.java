@@ -5,7 +5,9 @@ import net.sphuta.tms.freelancer.dto.NotificationItem;
 import net.sphuta.tms.freelancer.dto.NotificationListResponse;
 import net.sphuta.tms.freelancer.dto.NotificationCount;
 import net.sphuta.tms.freelancer.entity.Notification;
+import net.sphuta.tms.freelancer.exception.NotFoundException;
 import net.sphuta.tms.freelancer.repository.NotificationRepository;
+import net.sphuta.tms.freelancer.repository.UserRepository;
 import net.sphuta.tms.freelancer.service.NotificationService;
 import net.sphuta.tms.freelancer.util.NotificationMapper;
 import org.springframework.data.domain.PageRequest;
@@ -19,20 +21,27 @@ import java.util.stream.Collectors;
 public class NotificationServiceImpl implements NotificationService {
 
     private final NotificationRepository repo;
+    private final UserRepository userRepo; // To validate user existence
 
-    public NotificationServiceImpl(NotificationRepository repo) {
+    public NotificationServiceImpl(NotificationRepository repo, UserRepository userRepo) {
         this.repo = repo;
+        this.userRepo = userRepo;
     }
 
     @Override
     @Transactional(readOnly = true)
-    public NotificationListResponse listNotifications(long userId, int limit, int offset) {
+    public NotificationListResponse listUnreadNotifications(long userId, int limit, int offset) {
+        // ✅ Validate user exists
+        if (!userRepo.existsById(userId)) {
+            throw new NotFoundException("User with id " + userId + " doesn't exist");
+        }
+
         if (limit <= 0) limit = 20;
         if (offset < 0) offset = 0;
         int page = offset / Math.max(1, limit);
         var pageable = PageRequest.of(page, Math.max(1, limit));
 
-        List<Notification> items = repo.findAllByUserIdOrdered(userId, pageable);
+        List<Notification> items = repo.findUnreadByUserIdOrdered(userId, pageable);
 
         long total = repo.countAllByUserId(userId);
         long unread = repo.countUnreadByUserId(userId);
@@ -47,6 +56,11 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     @Transactional
     public Long createNotification(NotificationCreateRequest req) {
+        // ✅ Validate user exists
+        if (!userRepo.existsById(req.userId())) {
+            throw new NotFoundException("User with id " + req.userId() + " doesn't exist");
+        }
+
         Notification entity = NotificationMapper.toEntity(req);
         Notification saved = repo.save(entity);
         return saved.getId();

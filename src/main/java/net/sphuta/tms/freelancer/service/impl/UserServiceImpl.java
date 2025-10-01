@@ -50,7 +50,7 @@ public class UserServiceImpl implements UserService {
                 .build();
         user = userRepo.save(user);
         String token = jwtUtil.generateToken(user.getEmail(), user.getRoles());
-        return new AuthResponses.JwtResponse(token,"Bearer", user.getFirstName() + " " + Optional.ofNullable(user.getLastName()).orElse(""), user.getEmail());
+        return new AuthResponses.JwtResponse(token,"Bearer", user.getFirstName() + " " + Optional.ofNullable(user.getLastName()).orElse(""), user.getEmail(), user.getId());
     }
 
     @Override
@@ -60,7 +60,7 @@ public class UserServiceImpl implements UserService {
         var user = opt.orElseThrow(() -> new IllegalArgumentException("Email doesn't exist"));
         if (!passwordEncoder.matches(password, user.getPasswordHash())) throw new IllegalArgumentException("Invalid credentials");
         String token = jwtUtil.generateToken(user.getEmail(), user.getRoles());
-        return new AuthResponses.JwtResponse(token,"Bearer", user.getFirstName() + " " + Optional.ofNullable(user.getLastName()).orElse(""), user.getEmail());
+        return new AuthResponses.JwtResponse(token,"Bearer", user.getFirstName() + " " + Optional.ofNullable(user.getLastName()).orElse(""), user.getEmail(),user.getId());
     }
 
     @Override
