@@ -55,7 +55,7 @@ public class NotificationController {
     @PostMapping("/notifications/{notificationId}/read")
     public ResponseEntity<String> markOneRead(@PathVariable("notificationId") long notificationId) {
         svc.markOneRead(notificationId);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok("Notification " + notificationId + " marked as read");
     }
 
     /** Mark all notifications as read (all users). */
