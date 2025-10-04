@@ -11,6 +11,7 @@ import net.sphuta.tms.freelancer.repository.UserRepository;
 import net.sphuta.tms.freelancer.security.JwtUtil;
 import net.sphuta.tms.freelancer.service.EmailService;
 import net.sphuta.tms.freelancer.service.UserService;
+import net.sphuta.tms.freelancer.util.EncryptionUtil;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import jakarta.transaction.Transactional;
@@ -30,7 +31,10 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public AuthResponses.JwtResponse signup(AuthRequests.SignupRequest req) {
-        if (!req.password().equals(req.confirmPassword())) {
+        // Decrypt passwords from UI
+        String decryptedPassword = EncryptionUtil.decrypt(req.password());
+        String decryptedConfirmPassword = EncryptionUtil.decrypt(req.confirmPassword());
+        if (!decryptedPassword.equals(decryptedConfirmPassword)) {
             throw new IllegalArgumentException("Passwords do not match");
         }
         if (userRepo.existsByEmail(req.email())) {
@@ -42,7 +46,7 @@ public class UserServiceImpl implements UserService {
                 .lastName(req.lastName())
                 .email(req.email())
                 .username(username)
-                .passwordHash(passwordEncoder.encode(req.password()))
+                .passwordHash(passwordEncoder.encode(decryptedPassword))
                 .phone(req.phone())
                 .countryCode(req.countryCode())
                 .roles(Set.of("ROLE_USER"))
@@ -55,10 +59,12 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public AuthResponses.JwtResponse login(String emailOrUsername, String password) {
+        // Decrypt password from UI
+        String decryptedPassword = EncryptionUtil.decrypt(password);
         var opt = userRepo.findByEmail(emailOrUsername);
         if (opt.isEmpty()) opt = userRepo.findByUsername(emailOrUsername);
         var user = opt.orElseThrow(() -> new IllegalArgumentException("Email doesn't exist"));
-        if (!passwordEncoder.matches(password, user.getPasswordHash())) throw new IllegalArgumentException("Invalid credentials");
+        if (!passwordEncoder.matches(decryptedPassword, user.getPasswordHash())) throw new IllegalArgumentException("Invalid credentials");
         String token = jwtUtil.generateToken(user.getEmail(), user.getRoles());
         return new AuthResponses.JwtResponse(token,"Bearer", user.getFirstName() + " " + Optional.ofNullable(user.getLastName()).orElse(""), user.getEmail(),user.getId());
     }
@@ -82,9 +88,11 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public void resetPasswordByEmail(String email, String newPassword) {
+        // Decrypt password from UI
+        String decryptedPassword = EncryptionUtil.decrypt(newPassword);
         var user = userRepo.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("Email doesn't exist"));
-        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        user.setPasswordHash(passwordEncoder.encode(decryptedPassword));
         userRepo.save(user);
 
         // optionally: invalidate any outstanding reset tokens
