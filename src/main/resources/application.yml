@@ -47,3 +47,5 @@ springdoc:
 jwt:
   secret: verysecret_jwt_key_for_dev_change_me
   expirationMs: 3600000
+
+
