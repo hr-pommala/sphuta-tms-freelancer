@@ -26,8 +26,7 @@ import java.util.List;
                 columnNames = {"project_id", "period_start", "period_end"}
         )
 )
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder

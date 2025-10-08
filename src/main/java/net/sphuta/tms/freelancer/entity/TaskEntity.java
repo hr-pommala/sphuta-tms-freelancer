@@ -21,17 +21,15 @@ import java.time.OffsetDateTime;
  * Description is optional and can be null.
  * ID is auto-generated.
  */
-@Getter
-@Setter
+@Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "tasks", indexes = {
-        @Index(name = "idx_tasks_project", columnList = "project_id")
-})
+@Table(name = "tasks")
 public class TaskEntity {
 
+    // Primary key of the task, auto-generated.
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
@@ -40,20 +38,26 @@ public class TaskEntity {
     @Column(name = "project_id", nullable = false)
     private Integer projectId;
 
+    // Name of the task, cannot be null
     @Column(name = "task_name", nullable = false, length = 255)
     private String taskName;
 
+    // Description of the task, can be null
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
+    // Timestamp when the task was created, auto-set on insert
     @CreationTimestamp
     @Column(name = "created_dt", nullable = false, updatable = false)
     private OffsetDateTime createdDt;
 
+    // Timestamp when the task was last updated, auto-set on update
     @UpdateTimestamp
     @Column(name = "updated_dt", nullable = false)
     private OffsetDateTime updatedDt;
 
+    // Many-to-one relationship to ProjectEntity
+    // Lazy fetch to avoid loading project unless needed
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "project_id", nullable = false, insertable = false, updatable = false)
     @OnDelete(action = OnDeleteAction.CASCADE)

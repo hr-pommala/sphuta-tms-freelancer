@@ -61,9 +61,9 @@ public class TmsClientController {
      * @param size   page size
      * @return list of clients wrapped in {@link TmsApiResponse}
      */
-    @Operation(summary = "List clients")
+    @Operation(summary = "List clients", description = "Fetch paginated list of clients with optional filtering by active status and search keyword")
     @GetMapping
-    public ResponseEntity<TmsApiResponse<List<TmsClientDto>>> list(
+    public ResponseEntity<TmsApiResponse<List<TmsClientDto>>> getClientlist(
             @RequestParam(defaultValue = "true") String active,
             @RequestParam(defaultValue = "") String search,
             @RequestParam(defaultValue = "0") int page,
@@ -73,7 +73,7 @@ public class TmsClientController {
 
         Page<TmsClientDto> result = "all".equalsIgnoreCase(active)
                 ? service.listAll(search, page, size)
-                : service.list(Boolean.parseBoolean(active), search, page, size);
+                : service.getClientlist(Boolean.parseBoolean(active), search, page, size);
 
         log.info("Fetched {} clients", result.getNumberOfElements());
 
@@ -92,7 +92,7 @@ public class TmsClientController {
      * @param id client identifier
      * @return client details wrapped in {@link TmsApiResponse}
      */
-    @Operation(summary = "Get a client by ID")
+    @Operation(summary = "Get a client by ID", description = "Fetch a single client by its unique identifier")
     @GetMapping("/{id}")
     public ResponseEntity<TmsApiResponse<TmsClientDto>> get(@PathVariable int id) {
         log.debug("Fetching client with id={}", id);

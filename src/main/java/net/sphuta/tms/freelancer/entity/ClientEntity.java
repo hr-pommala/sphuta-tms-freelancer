@@ -1,11 +1,7 @@
 package net.sphuta.tms.freelancer.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.time.Instant;
 import java.util.List;
@@ -30,11 +26,10 @@ import java.util.Optional;
  * - Implements lifecycle hooks with {@code @PrePersist} and {@code @PreUpdate}. <br>
  * - Domain-driven → entity encapsulates behavior (`generateDisplayName`). <br>
  */
-@Getter
-@Setter
+@Data
 @Builder
-@NoArgsConstructor
 @AllArgsConstructor
+@NoArgsConstructor
 @Entity
 @Table(name = "clients")
 public class ClientEntity {

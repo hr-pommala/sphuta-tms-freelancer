@@ -69,9 +69,7 @@ public interface TmsTimeEntryRepository extends JpaRepository<TimeEntryEntity, I
         order by e.entryDate, e.id
     """)
     List<TimeEntryEntity> findByTimesheetInAndEntryDateBetween(
-            @Param("timesheets") List<TimesheetEntity> timesheets,
-            @Param("start") LocalDate start,
-            @Param("end") LocalDate end
+            List<TimesheetEntity> timesheets, LocalDate start, LocalDate end
     );
     /**
      * Derived query that matches by timesheet + entryDate + task entity.
@@ -80,9 +78,7 @@ public interface TmsTimeEntryRepository extends JpaRepository<TimeEntryEntity, I
 
      */
     @Query("select e from TimeEntryEntity e where e.timesheet = :timesheet and e.entryDate = :entryDate and e.task = :task")
-    Optional<TimeEntryEntity> findByTimesheetAndEntryDateAndTask(@Param("timesheet") TimesheetEntity timesheet,
-                                                                 @Param("entryDate") LocalDate entryDate,
-                                                                 @Param("task") TaskEntity task);
+    Optional<TimeEntryEntity> findByTimesheetAndEntryDateAndTask( TimesheetEntity timesheet, LocalDate entryDate, TaskEntity task);
 
     /**
      * Derived query that matches by timesheet + entryDate + task id.

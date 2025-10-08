@@ -26,15 +26,10 @@ import java.time.OffsetDateTime;
  * - {@code status} transitions are controlled via {@link Status}.
  * - Indexed by {@code client_id} for efficient lookups.
  */
-@Getter
-@Setter
+@Data
 @Entity
-@Table(
-        name = "invoices",
-        indexes = @Index(name = "idx_inv_client", columnList = "client_id")
-)
+@Table(name = "invoices")
 @Builder
-@NoArgsConstructor
 @AllArgsConstructor
 @Slf4j
 public class InvoiceEntity {
@@ -79,40 +74,40 @@ public class InvoiceEntity {
     @Column(name = "updated_at")
     private OffsetDateTime updatedAt;
 
-    // ----------------------------
-    // Entity Lifecycle Callbacks
-    // ----------------------------
-
-    /** Fires before inserting a new record (logs context). */
-    @PrePersist
-    private void beforePersist() {
-        log.info("About to persist new Invoice for clientId={}, issueDate={}, dueDate={}",
-                clientId, issueDate, dueDate);
-    }
-
-    /** Fires after inserting a new record (logs assigned ID and status). */
-    @PostPersist
-    private void afterPersist() {
-        log.info("Persisted Invoice with id={} and status={}", id, status);
-    }
-
-    /** Fires before updating a record. */
-    @PreUpdate
-    private void beforeUpdate() {
-        log.info("About to update Invoice id={}, currentStatus={}", id, status);
-    }
-
-    /** Fires after updating a record. */
-    @PostUpdate
-    private void afterUpdate() {
-        log.info("Updated Invoice id={} at {}, newStatus={}", id, updatedAt, status);
-    }
-
-    /** Fires when an entity is loaded from the database. */
-    @PostLoad
-    private void afterLoad() {
-        log.debug("Loaded Invoice id={} for clientId={} with status={}", id, clientId, status);
-    }
+//    // ----------------------------
+//    // Entity Lifecycle Callbacks
+//    // ----------------------------
+//
+//    /** Fires before inserting a new record (logs context). */
+//    @PrePersist
+//    private void beforePersist() {
+//        log.info("About to persist new Invoice for clientId={}, issueDate={}, dueDate={}",
+//                clientId, issueDate, dueDate);
+//    }
+//
+//    /** Fires after inserting a new record (logs assigned ID and status). */
+//    @PostPersist
+//    private void afterPersist() {
+//        log.info("Persisted Invoice with id={} and status={}", id, status);
+//    }
+//
+//    /** Fires before updating a record. */
+//    @PreUpdate
+//    private void beforeUpdate() {
+//        log.info("About to update Invoice id={}, currentStatus={}", id, status);
+//    }
+//
+//    /** Fires after updating a record. */
+//    @PostUpdate
+//    private void afterUpdate() {
+//        log.info("Updated Invoice id={} at {}, newStatus={}", id, updatedAt, status);
+//    }
+//
+//    /** Fires when an entity is loaded from the database. */
+//    @PostLoad
+//    private void afterLoad() {
+//        log.debug("Loaded Invoice id={} for clientId={} with status={}", id, clientId, status);
+//    }
 
     /**
      * Enumeration for Invoice status lifecycle.

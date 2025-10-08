@@ -28,7 +28,7 @@ public interface TmsClientService {
      * @param size   number of records per page
      * @return a paginated {@link Page} of {@link TmsClientDto}
      */
-    Page<TmsClientDto> list(boolean active, String search, int page, int size);
+    Page<TmsClientDto> getClientlist(boolean active, String search, int page, int size);
 
     /**
      * Retrieve a paginated list of all clients (active and archived).

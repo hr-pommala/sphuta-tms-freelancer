@@ -79,12 +79,9 @@ public class SettingsInvoicingController {
     public ResponseEntity<ApiResponse<SettingsInvoicingDTO>> getSettingsByUserId(
             @Parameter(description = "Unique identifier of the user") @PathVariable Integer userId) {
         log.info("GET request: Fetch settings for userId={}", userId);
-        return service.getSettingsByUserId(userId)
-                .map(dto -> ResponseEntity.ok(ApiResponse.success(ApiMessageConstants.MSG_FETCH_SINGLE_SETTING, dto)))
-                .orElseThrow(() -> new NotFoundException(
-                        ApiMessageConstants.MSG_SETTINGS_NOT_FOUND + " for userId: " + userId));
+        var dto = service.getSettingsByUserId(userId).orElseThrow(); // will not happen because service already throws
+        return ResponseEntity.ok(ApiResponse.success(ApiMessageConstants.MSG_FETCH_SINGLE_SETTING, dto));
     }
-
     /**
      * Create invoicing settings for a user.
      *
@@ -97,7 +94,7 @@ public class SettingsInvoicingController {
     public ResponseEntity<ApiResponse<SettingsInvoicingDTO>> createSettings(
             @Parameter(description = "Invoicing settings data to create") @Valid @RequestBody SettingsInvoicingDTO dto) {
         log.info("POST request: Create invoicing settings for userId={}", dto.userId());
-        SettingsInvoicingDTO created = service.createSettings(dto);
+        var created = service.createSettings(dto);
         return ResponseEntity.status(201)
                 .body(ApiResponse.success(ApiMessageConstants.MSG_SETTINGS_CREATED, created));
     }
@@ -116,7 +113,7 @@ public class SettingsInvoicingController {
             @Parameter(description = "Unique identifier of the user") @PathVariable Integer userId,
             @Parameter(description = "Updated invoicing settings data") @Valid @RequestBody SettingsInvoicingDTO dto) {
         log.info("PUT request: Update settings for userId={}", userId);
-        SettingsInvoicingDTO updated = service.updateSettings(userId, dto);
+        var updated = service.updateSettings(userId, dto);
         return ResponseEntity.ok(ApiResponse.success(ApiMessageConstants.MSG_SETTINGS_UPDATED, updated));
     }
 

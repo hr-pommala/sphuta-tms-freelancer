@@ -94,12 +94,12 @@ public class TmsTimeEntryServiceImpl implements TmsTimeEntryService {
             throw new ConflictException("Timesheet is LOCKED and cannot be modified");
         }
 
-        // Validate entry date is within timesheet period
-        if (req.entryDate().isBefore(t.getPeriodStart()) || req.entryDate().isAfter(t.getPeriodEnd())) {
-            log.warn("create time-entry: entryDate {} outside [{}, {}] for timesheet={}",
-                    req.entryDate(), t.getPeriodStart(), t.getPeriodEnd(), t.getId());
-            throw new ApiExceptions.ValidationException("entryDate outside timesheet period");
-        }
+//        // Validate entry date is within timesheet period
+//        if (req.entryDate().isBefore(t.getPeriodStart()) || req.entryDate().isAfter(t.getPeriodEnd())) {
+//            log.warn("create time-entry: entryDate {} outside [{}, {}] for timesheet={}",
+//                    req.entryDate(), t.getPeriodStart(), t.getPeriodEnd(), t.getId());
+//            throw new ApiExceptions.ValidationException("entryDate outside timesheet period");
+//        }
 
         // Validate hours > 0
         if (Optional.ofNullable(req.hours()).filter(h -> h.compareTo(BigDecimal.ZERO) > 0).isEmpty()) {

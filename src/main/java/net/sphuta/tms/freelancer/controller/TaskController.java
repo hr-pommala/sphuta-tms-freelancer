@@ -42,7 +42,7 @@ public class TaskController {
      * @return ResponseEntity with created TaskDto and HTTP status 201 (Created).
      * @throws IllegalArgumentException if projectId in path and body do not match.
      */
-    @Operation(summary = "Create Task")
+    @Operation(summary = "Create Task", description = "Create a new task within a specified project")
     @PostMapping("/projects/{projectId}/tasks")
     public ResponseEntity<TmsApiResponse<TaskDto>> create(
             @PathVariable int projectId,
@@ -65,7 +65,7 @@ public class TaskController {
      * @param req TaskDto containing updated task details.
      * @return ResponseEntity with updated TaskDto and HTTP status 200 (OK).
      */
-    @Operation(summary = "Update Task")
+    @Operation(summary = "Update Task", description = "Update an existing task by its ID")
     @PutMapping("/tasks/{id}")
     public ResponseEntity<TmsApiResponse<TaskDto>> update(
             @PathVariable int id,
@@ -84,7 +84,7 @@ public class TaskController {
      * @param id ID of the task to retrieve.
      * @return ResponseEntity with TaskDto and HTTP status 200 (OK).
      */
-    @Operation(summary = "Get Task")
+    @Operation(summary = "Get Task", description = "Retrieve a task by its ID")
     @GetMapping("/tasks/{id}")
     public ResponseEntity<TmsApiResponse<TaskDto>> get(@PathVariable int id) {
 
@@ -101,7 +101,7 @@ public class TaskController {
      * @param projectId ID of the project whose tasks to list.
      * @return ResponseEntity with list of TaskDto and HTTP status 200 (OK).
      */
-    @Operation(summary = "List tasks by project")
+    @Operation(summary = "List tasks by project", description = "List all tasks associated with a specific project ID")
     @GetMapping("/projects/{projectId}/tasks")
     public ResponseEntity<TmsApiResponse<List<TaskDto>>> listByProject(@PathVariable int projectId) {
 
@@ -117,7 +117,7 @@ public class TaskController {
     /** List all tasks.
      * @return ResponseEntity with list of all TaskDto and HTTP status 200 (OK).
      */
-    @Operation(summary = "List all tasks")
+    @Operation(summary = "List all tasks", description = "Retrieve a list of all tasks across all projects")
     @GetMapping("/tasks")
     public ResponseEntity<TmsApiResponse<List<TaskDto>>> listAll() {
 
@@ -134,7 +134,7 @@ public class TaskController {
      * @param id ID of the task to delete.
      * @return ResponseEntity with HTTP status 200 (OK) and deletion message.
      */
-    @Operation(summary = "Delete Task")
+    @Operation(summary = "Delete Task", description = "Delete a task by its ID")
     @DeleteMapping("/tasks/{id}")
     public ResponseEntity<TmsApiResponse<Void>> delete(@PathVariable int id) {
 

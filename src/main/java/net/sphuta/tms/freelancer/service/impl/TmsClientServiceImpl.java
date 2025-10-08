@@ -59,8 +59,8 @@ public class TmsClientServiceImpl implements TmsClientService {
     private TmsInvoiceRepository invoiceRepo;
 
     /** Repository for estimate references */
-    @Autowired
-    private TmsEstimateRepository estimateRepo;
+//    @Autowired
+//    private TmsEstimateRepository estimateRepo;
 
     /** Repository for user validation */
     @Autowired
@@ -80,7 +80,7 @@ public class TmsClientServiceImpl implements TmsClientService {
      * @return paginated {@link Page} of {@link TmsClientDto}
      */
     @Override
-    public Page<TmsClientDto> list(boolean active, String search, int page, int size) {
+    public Page<TmsClientDto> getClientlist(boolean active, String search, int page, int size) {
         int p = Math.max(page, 0);
         int s = Math.min(Math.max(size, 1), 100);
 
@@ -305,7 +305,7 @@ public class TmsClientServiceImpl implements TmsClientService {
 
         Page<TmsClientDto> page = "all".equalsIgnoreCase(activeFilter)
                 ? listAll(search, 0, Integer.MAX_VALUE)
-                : list(Boolean.parseBoolean(activeFilter), search, 0, Integer.MAX_VALUE);
+                : getClientlist(Boolean.parseBoolean(activeFilter), search, 0, Integer.MAX_VALUE);
 
         String header = "id,companyName,firstName,lastName,email,isActive\n";
 

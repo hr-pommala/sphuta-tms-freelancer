@@ -323,11 +323,11 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
                     r.entryDate(), r.description(), r.hours(), r.rateAtEntry(), r.taskId());
 
             // validate date within timesheet period
-            if (r.entryDate().isBefore(t.getPeriodStart()) || r.entryDate().isAfter(t.getPeriodEnd())) {
-                log.warn("Validation failed: entry outside period. entry={}, period={}..{}",
-                        r.entryDate(), t.getPeriodStart(), t.getPeriodEnd());
-                throw new ApiExceptions.ValidationException("Some entries invalid: outside period");
-            }
+//            if (r.entryDate().isBefore(t.getPeriodStart()) || r.entryDate().isAfter(t.getPeriodEnd())) {
+//                log.warn("Validation failed: entry outside period. entry={}, period={}..{}",
+//                        r.entryDate(), t.getPeriodStart(), t.getPeriodEnd());
+//                throw new ApiExceptions.ValidationException("Some entries invalid: outside period");
+//            }
 
             // validate hours > 0
             if (Optional.ofNullable(r.hours()).filter(h -> h.compareTo(BigDecimal.ZERO) > 0).isEmpty()) {
@@ -420,6 +420,12 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
     // -------------------------------------------------------------------------
     // Weekly / Monthly retrievals (RETURN FORMAT CHANGED)
     // -------------------------------------------------------------------------
+
+    /**
+     * Get weekly time entries for a user, aggregated per project.
+     * The week is defined as Monday to Sunday containing today's date.
+     * The returned map is keyed by projectId and contains:
+     **/
     @Override
     @Transactional(readOnly = true)
     public Map<Integer, Map<String, Object>> getWeeklyTimeEntries(String userEmail) {
@@ -434,6 +440,11 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
         return getTimeEntriesForUserForRange(user.getEmail(), weekStart, weekEnd);
     }
 
+    /**
+     * Get monthly time entries for a user, aggregated per project.
+     * The month is defined as the current calendar month.
+     * The returned map is keyed by projectId and contains:
+     **/
     @Override
     @Transactional(readOnly = true)
     public Map<Integer, Map<String, Object>> getMonthlyTimeEntries(String userEmail) {
