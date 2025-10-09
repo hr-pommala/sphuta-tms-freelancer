@@ -5,10 +5,10 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
-import net.sphuta.tms.freelancer.constants.ApiMessageConstants;
+import net.sphuta.tms.freelancer.constants.TmsMessages;
 import net.sphuta.tms.freelancer.dto.SettingsInvoicingDTO;
 import net.sphuta.tms.freelancer.exception.NotFoundException;
-import net.sphuta.tms.freelancer.response.ApiResponse;
+import net.sphuta.tms.freelancer.response.TmsApiResponse;
 import net.sphuta.tms.freelancer.service.SettingsInvoicingService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -32,7 +32,7 @@ import java.util.List;
  * <p>This controller uses:
  * <ul>
  *   <li>{@link SettingsInvoicingService} for business logic</li>
- *   <li>{@link ApiResponse} as a standard response wrapper</li>
+ *   <li>{@link TmsApiResponse} as a standard response wrapper</li>
  *   <li>Swagger annotations for API documentation</li>
  *   <li>SLF4J logging for request tracing</li>
  * </ul>
@@ -55,48 +55,47 @@ public class SettingsInvoicingController {
     /**
      * Retrieve all invoicing settings.
      *
-     * @return ResponseEntity containing {@link ApiResponse} with a list of {@link SettingsInvoicingDTO}
+     * @return ResponseEntity containing {@link TmsApiResponse} with a list of {@link SettingsInvoicingDTO}
      */
     @GetMapping
     @Operation(summary = "Get all invoicing settings",
             description = "Returns a list of all invoicing settings configured in the system")
-    public ResponseEntity<ApiResponse<List<SettingsInvoicingDTO>>> getAllSettings() {
+    public TmsApiResponse<List<SettingsInvoicingDTO>> getAllSettings() {
         log.info("GET request: Fetch all invoicing settings");
         List<SettingsInvoicingDTO> settingsList = service.getAllSettings();
-        return ResponseEntity.ok(ApiResponse.success(ApiMessageConstants.MSG_FETCH_ALL_SETTINGS, settingsList));
+        return TmsApiResponse.success(TmsMessages.MSG_FETCH_ALL_SETTINGS, settingsList);
     }
 
     /**
      * Retrieve invoicing settings for a specific user.
      *
      * @param userId the unique user identifier
-     * @return ResponseEntity containing {@link ApiResponse} with {@link SettingsInvoicingDTO}
+     * @return ResponseEntity containing {@link TmsApiResponse} with {@link SettingsInvoicingDTO}
      * @throws NotFoundException if no settings exist for the given userId
      */
     @GetMapping("/{userId}")
     @Operation(summary = "Get invoicing settings by user ID",
             description = "Returns the invoicing settings for the specified user ID")
-    public ResponseEntity<ApiResponse<SettingsInvoicingDTO>> getSettingsByUserId(
+    public TmsApiResponse<SettingsInvoicingDTO> getSettingsByUserId(
             @Parameter(description = "Unique identifier of the user") @PathVariable Integer userId) {
         log.info("GET request: Fetch settings for userId={}", userId);
         var dto = service.getSettingsByUserId(userId).orElseThrow(); // will not happen because service already throws
-        return ResponseEntity.ok(ApiResponse.success(ApiMessageConstants.MSG_FETCH_SINGLE_SETTING, dto));
+        return TmsApiResponse.success(TmsMessages.MSG_FETCH_SINGLE_SETTING, dto);
     }
     /**
      * Create invoicing settings for a user.
      *
      * @param dto the invoicing settings to create
-     * @return ResponseEntity containing {@link ApiResponse} with the created {@link SettingsInvoicingDTO}
+     * @return ResponseEntity containing {@link TmsApiResponse} with the created {@link SettingsInvoicingDTO}
      */
     @PostMapping
     @Operation(summary = "Create new invoicing settings",
             description = "Creates invoicing settings for a specific user")
-    public ResponseEntity<ApiResponse<SettingsInvoicingDTO>> createSettings(
+    public TmsApiResponse<SettingsInvoicingDTO> createSettings(
             @Parameter(description = "Invoicing settings data to create") @Valid @RequestBody SettingsInvoicingDTO dto) {
         log.info("POST request: Create invoicing settings for userId={}", dto.userId());
         var created = service.createSettings(dto);
-        return ResponseEntity.status(201)
-                .body(ApiResponse.success(ApiMessageConstants.MSG_SETTINGS_CREATED, created));
+        return TmsApiResponse.created(TmsMessages.MSG_SETTINGS_CREATED, created);
     }
 
     /**
@@ -104,17 +103,17 @@ public class SettingsInvoicingController {
      *
      * @param userId the user ID
      * @param dto    updated invoicing settings
-     * @return ResponseEntity containing {@link ApiResponse} with the updated {@link SettingsInvoicingDTO}
+     * @return ResponseEntity containing {@link TmsApiResponse} with the updated {@link SettingsInvoicingDTO}
      */
     @PutMapping("/{userId}")
     @Operation(summary = "Update invoicing settings completely",
             description = "Replaces existing invoicing settings for a user with new values")
-    public ResponseEntity<ApiResponse<SettingsInvoicingDTO>> updateSettings(
+    public TmsApiResponse<SettingsInvoicingDTO> updateSettings(
             @Parameter(description = "Unique identifier of the user") @PathVariable Integer userId,
             @Parameter(description = "Updated invoicing settings data") @Valid @RequestBody SettingsInvoicingDTO dto) {
         log.info("PUT request: Update settings for userId={}", userId);
         var updated = service.updateSettings(userId, dto);
-        return ResponseEntity.ok(ApiResponse.success(ApiMessageConstants.MSG_SETTINGS_UPDATED, updated));
+        return TmsApiResponse.success(TmsMessages.MSG_SETTINGS_UPDATED, updated);
     }
 
 
@@ -122,15 +121,15 @@ public class SettingsInvoicingController {
      * Delete invoicing settings for a user.
      *
      * @param userId the user ID
-     * @return ResponseEntity containing {@link ApiResponse} with no data (null)
+     * @return ResponseEntity containing {@link TmsApiResponse} with no data (null)
      */
     @DeleteMapping("/{userId}")
     @Operation(summary = "Delete invoicing settings by user ID",
             description = "Deletes invoicing settings for the specified user")
-    public ResponseEntity<ApiResponse<Void>> deleteSettings(
+    public TmsApiResponse<Void> deleteSettings(
             @Parameter(description = "Unique identifier of the user") @PathVariable Integer userId) {
         log.info("DELETE request: Delete settings for userId={}", userId);
         service.deleteSettings(userId);
-        return ResponseEntity.ok(ApiResponse.success(ApiMessageConstants.MSG_SETTINGS_DELETED, null));
+        return TmsApiResponse.success(TmsMessages.MSG_SETTINGS_DELETED, null);
     }
 }

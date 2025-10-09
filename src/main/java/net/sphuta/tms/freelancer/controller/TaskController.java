@@ -44,7 +44,7 @@ public class TaskController {
      */
     @Operation(summary = "Create Task", description = "Create a new task within a specified project")
     @PostMapping("/projects/{projectId}/tasks")
-    public ResponseEntity<TmsApiResponse<TaskDto>> create(
+    public TmsApiResponse<TaskDto> create(
             @PathVariable int projectId,
             @Valid @RequestBody TaskDto req) {
 
@@ -56,8 +56,7 @@ public class TaskController {
 
         log.debug("Task created successfully: {}", created);
 
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(TmsApiResponse.success(HttpStatus.CREATED, TmsMessages.ENTITIES_CREATED, created));
+        return TmsApiResponse.created( TmsMessages.ENTITIES_CREATED, created);
     }
 
     /** Update an existing task.
@@ -67,7 +66,7 @@ public class TaskController {
      */
     @Operation(summary = "Update Task", description = "Update an existing task by its ID")
     @PutMapping("/tasks/{id}")
-    public ResponseEntity<TmsApiResponse<TaskDto>> update(
+    public TmsApiResponse<TaskDto> update(
             @PathVariable int id,
             @Valid @RequestBody TaskDto req) {
 
@@ -77,7 +76,7 @@ public class TaskController {
 
         log.debug("Task updated successfully: {}", updated);
 
-        return ResponseEntity.ok(TmsApiResponse.success(HttpStatus.OK, TmsMessages.ENTITIES_UPDATED, updated));
+        return TmsApiResponse.success(TmsMessages.ENTITIES_UPDATED, updated);
     }
 
     /** Get a task by ID.
@@ -86,7 +85,7 @@ public class TaskController {
      */
     @Operation(summary = "Get Task", description = "Retrieve a task by its ID")
     @GetMapping("/tasks/{id}")
-    public ResponseEntity<TmsApiResponse<TaskDto>> get(@PathVariable int id) {
+    public TmsApiResponse<TaskDto> get(@PathVariable int id) {
 
         log.info("Fetching task with ID: {}", id);
 
@@ -94,7 +93,7 @@ public class TaskController {
 
         log.debug("Fetched task: {}", data);
 
-        return ResponseEntity.ok(TmsApiResponse.success(HttpStatus.OK, TmsMessages.ENTITY_FETCHED, data));
+        return TmsApiResponse.success(TmsMessages.ENTITY_FETCHED, data);
     }
 
     /** List tasks by project ID.
@@ -103,7 +102,7 @@ public class TaskController {
      */
     @Operation(summary = "List tasks by project", description = "List all tasks associated with a specific project ID")
     @GetMapping("/projects/{projectId}/tasks")
-    public ResponseEntity<TmsApiResponse<List<TaskDto>>> listByProject(@PathVariable int projectId) {
+    public TmsApiResponse<List<TaskDto>> listByProject(@PathVariable int projectId) {
 
         log.info("Listing tasks for projectId: {}", projectId);
 
@@ -111,7 +110,7 @@ public class TaskController {
 
         log.debug("Found {} tasks for projectId: {}", list.size(), projectId);
 
-        return ResponseEntity.ok(TmsApiResponse.success(HttpStatus.OK, TmsMessages.ENTITIES_FETCHED, list));
+        return TmsApiResponse.success(TmsMessages.ENTITIES_FETCHED, list);
     }
 
     /** List all tasks.
@@ -119,7 +118,7 @@ public class TaskController {
      */
     @Operation(summary = "List all tasks", description = "Retrieve a list of all tasks across all projects")
     @GetMapping("/tasks")
-    public ResponseEntity<TmsApiResponse<List<TaskDto>>> listAll() {
+    public TmsApiResponse<List<TaskDto>> listAll() {
 
         log.info("Listing all tasks");
 
@@ -127,7 +126,7 @@ public class TaskController {
 
         log.debug("Found {} tasks in total", list.size());
 
-        return ResponseEntity.ok(TmsApiResponse.success(HttpStatus.OK, TmsMessages.ENTRIES_FETCHED, list));
+        return TmsApiResponse.success(TmsMessages.ENTRIES_FETCHED, list);
     }
 
     /** Delete a task by ID.
@@ -136,7 +135,7 @@ public class TaskController {
      */
     @Operation(summary = "Delete Task", description = "Delete a task by its ID")
     @DeleteMapping("/tasks/{id}")
-    public ResponseEntity<TmsApiResponse<Void>> delete(@PathVariable int id) {
+    public TmsApiResponse<Void> delete(@PathVariable int id) {
 
         log.warn("Deleting task with ID: {}", id);
 
@@ -144,7 +143,7 @@ public class TaskController {
 
         log.info("Task deleted successfully with ID: {}", id);
 
-        return ResponseEntity.ok(TmsApiResponse.success(HttpStatus.OK, TmsMessages.ENTITY_DELETED));
+        return TmsApiResponse.success(TmsMessages.ENTITY_DELETED, null);
     }
 }
 

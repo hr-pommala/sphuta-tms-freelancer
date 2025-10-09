@@ -6,12 +6,14 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import net.sphuta.tms.freelancer.dto.PreferencesDto;
-import net.sphuta.tms.freelancer.response.ApiResponse;
+import net.sphuta.tms.freelancer.response.TmsApiResponse;
 import net.sphuta.tms.freelancer.service.SettingsPreferencesService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
+import static net.sphuta.tms.freelancer.constants.TmsMessages.*;
 
 /**
  * <h2>PreferencesController</h2>
@@ -26,7 +28,7 @@ import java.util.List;
  * </ul>
  *
  * Each API is documented with Swagger annotations and follows standard
- * response patterns via {@link ApiResponse}.
+ * response patterns via {@link TmsApiResponse}.
  * </p>
  *
  * @author
@@ -50,7 +52,7 @@ public class PreferencesController {
     /**
      * Fetches all stored user preferences.
      *
-     * @return {@link ApiResponse} containing a list of {@link PreferencesDto}
+     * @return {@link TmsApiResponse} containing a list of {@link PreferencesDto}
      */
     @GetMapping
     @Operation(summary = "Get Preferences", description = "Fetch preferences for all users")
@@ -58,10 +60,10 @@ public class PreferencesController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Preferences fetched successfully"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    public ApiResponse<List<PreferencesDto>> getAllPreferences() {
+    public TmsApiResponse<List<PreferencesDto>> getAllPreferences() {
         log.debug("Fetching all preferences records");
-        return ApiResponse.success(
-                "All preferences fetched successfully",
+        return TmsApiResponse.success(
+                PREFERENCES_FETCH_ALL_SUCCESS,
                 settingsPreferencesService.getAllPreferences()
         );
     }
@@ -72,7 +74,7 @@ public class PreferencesController {
      * Fetches preferences for a specific user by {@code userId}.
      *
      * @param userId unique identifier of the user
-     * @return {@link ApiResponse} containing {@link PreferencesDto}
+     * @return {@link TmsApiResponse} containing {@link PreferencesDto}
      */
     @GetMapping("/{userId}")
     @Operation(summary = "Get Preferences by ID", description = "Fetch preferences for a specific user by userId")
@@ -82,10 +84,10 @@ public class PreferencesController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid userId"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    public ApiResponse<PreferencesDto> getPreferencesById(@PathVariable int userId) {
+    public TmsApiResponse<PreferencesDto> getPreferencesById(@PathVariable int userId) {
         log.debug("Fetching preferences by ID for user: {}", userId);
-        return ApiResponse.success(
-                "Preferences fetched successfully",
+        return TmsApiResponse.success(
+                PREFERENCES_FETCH_SUCCESS,
                 settingsPreferencesService.getPreferences(userId)
         );
     }
@@ -96,7 +98,7 @@ public class PreferencesController {
      * Creates new preferences for a user.
      *
      * @param request {@link PreferencesDto} object containing new preferences data
-     * @return {@link ApiResponse} containing created {@link PreferencesDto}
+     * @return {@link TmsApiResponse} containing created {@link PreferencesDto}
      */
     @PostMapping
     @Operation(summary = "Create Preferences", description = "Create preferences for a new user")
@@ -106,11 +108,11 @@ public class PreferencesController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "Preferences already exist for the user"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    public ApiResponse<PreferencesDto> createPreferences(
+    public TmsApiResponse<PreferencesDto> createPreferences(
             @Valid @RequestBody PreferencesDto request) {
         log.info("Creating preferences for user: {}", request.userId());
-        return ApiResponse.success(
-                "Preferences created successfully",
+        return TmsApiResponse.success(
+                PREFERENCES_CREATE_SUCCESS,
                 settingsPreferencesService.createPreferences(request)
         );
     }
@@ -122,7 +124,7 @@ public class PreferencesController {
      *
      * @param userId  unique identifier of the user
      * @param request {@link PreferencesDto} object containing updated preferences
-     * @return {@link ApiResponse} containing updated {@link PreferencesDto}
+     * @return {@link TmsApiResponse} containing updated {@link PreferencesDto}
      */
     @PutMapping("/{userId}")
     @Operation(summary = "Update Preferences", description = "Update all fields of user preferences")
@@ -132,12 +134,12 @@ public class PreferencesController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Preferences not found for the given user"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    public ApiResponse<PreferencesDto> updatePreferences(
+    public TmsApiResponse<PreferencesDto> updatePreferences(
             @PathVariable int userId,
             @Valid @RequestBody PreferencesDto request) {
         log.info("Updating all preferences for user: {}", userId);
-        return ApiResponse.success(
-                "Preferences updated successfully",
+        return TmsApiResponse.success(
+                PREFERENCES_UPDATE_SUCCESS,
                 settingsPreferencesService.updatePreferences(userId, request)
         );
     }
@@ -148,7 +150,7 @@ public class PreferencesController {
      * Deletes preferences for a specific user.
      *
      * @param userId unique identifier of the user
-     * @return {@link ApiResponse} with a success message
+     * @return {@link TmsApiResponse} with a success message
      */
     @DeleteMapping("/{userId}")
     @Operation(summary = "Delete Preferences", description = "Delete preferences for a user")
@@ -157,9 +159,9 @@ public class PreferencesController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Preferences not found for the given user"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    public ApiResponse<Void> deletePreferences(@PathVariable int userId) {
+    public TmsApiResponse<Void> deletePreferences(@PathVariable int userId) {
         log.warn("Deleting preferences for user: {}", userId);
         settingsPreferencesService.deletePreferences(userId);
-        return ApiResponse.success("Preferences deleted successfully", null);
+        return TmsApiResponse.success(PREFERENCES_DELETE_SUCCESS, null);
     }
 }

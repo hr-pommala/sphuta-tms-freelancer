@@ -2,6 +2,7 @@ package net.sphuta.tms.freelancer.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.extern.slf4j.Slf4j;
+import net.sphuta.tms.freelancer.constants.TmsMessages;
 import net.sphuta.tms.freelancer.dto.AuthRequests;
 import net.sphuta.tms.freelancer.dto.AuthResponses;
 import net.sphuta.tms.freelancer.entity.RevokedToken;
@@ -86,7 +87,7 @@ public class AuthController {
         log.info("Forgot password request received for email={}", req.email());
         userService.startForgotFlow(req.email());
         log.info("Forgot password process initiated for email={}", req.email());
-        return ResponseEntity.ok(new AuthResponses.ApiMessage("Reset link shared to registered email if exists"));
+        return ResponseEntity.ok(new AuthResponses.ApiMessage(TmsMessages.RESET_LINK_SENT));
     }
 
     /**
@@ -101,7 +102,7 @@ public class AuthController {
         log.info("Password reset request received for email={}", req.email());
         userService.resetPasswordByEmail(req.email(), req.newPassword(), req.confirmPassword());
         log.info("Password successfully reset for email={}", req.email());
-        return ResponseEntity.ok(new AuthResponses.ApiMessage("Password updated"));
+        return ResponseEntity.ok(new AuthResponses.ApiMessage(TmsMessages.PASSWORD_UPDATED));
     }
 
     /**
@@ -136,6 +137,6 @@ public class AuthController {
 
         // Always return OK, even if token was missing/invalid
         log.info("Logout completed successfully");
-        return ResponseEntity.ok(new AuthResponses.ApiMessage("Logged out"));
+        return ResponseEntity.ok(new AuthResponses.ApiMessage(TmsMessages.LOGGED_OUT));
     }
 }

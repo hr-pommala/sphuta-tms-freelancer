@@ -3,7 +3,6 @@ package net.sphuta.tms.freelancer.exception;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import net.sphuta.tms.freelancer.response.TmsApiResponse;
-import net.sphuta.tms.freelancer.util.TmsResponseUtil;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -58,9 +57,9 @@ public class GlobalExceptionHandler {
      * @return {@link ResponseEntity} with 404 status and error message
      */
     @ExceptionHandler(NotFoundException.class)
-    public ResponseEntity<TmsApiResponse<?>> notFound(NotFoundException ex) {
+    public TmsApiResponse<Void> notFound(NotFoundException ex) {
         log.error("NotFoundException handled: {}", ex.getMessage());
-        return wrap(HttpStatus.NOT_FOUND, ex.getMessage(), null);
+        return TmsApiResponse.failure(HttpStatus.NOT_FOUND, ex.getMessage(), null);
     }
 
     /**
@@ -70,9 +69,9 @@ public class GlobalExceptionHandler {
      * @return {@link ResponseEntity} with 409 status and error message
      */
     @ExceptionHandler(ConflictException.class)
-    public ResponseEntity<TmsApiResponse<?>> conflict(ConflictException ex) {
+    public TmsApiResponse<Void> conflict(ConflictException ex) {
         log.error("ConflictException handled: {}", ex.getMessage());
-        return wrap(HttpStatus.CONFLICT, ex.getMessage(), null);
+        return TmsApiResponse.failure(HttpStatus.CONFLICT, ex.getMessage(), null);
     }
 
     /**
@@ -83,19 +82,10 @@ public class GlobalExceptionHandler {
      * @return standardized error response with custom or default status
      */
     @ExceptionHandler(TmsException.class)
-    public ResponseEntity<TmsApiResponse<Void>> handleTms(TmsException ex, HttpServletRequest req) {
+    public TmsApiResponse<Void> handleTms(TmsException ex, HttpServletRequest req) {
         HttpStatus status = ex.getStatus() != null ? ex.getStatus() : HttpStatus.BAD_REQUEST;
         log.error("TmsException {} on {}: {}", status.value(), req.getRequestURI(), ex.getMessage());
-
-        TmsApiResponse<Void> body = new TmsApiResponse<>(
-                false,
-                status.value(),
-                status.getReasonPhrase(),
-                ex.getMessage(),
-                null,
-                LocalDateTime.now()
-        );
-        return ResponseEntity.status(status).body(body);
+        return TmsApiResponse.failure(status, ex.getMessage(), null);
     }
 
     // ------------------------------------------------------------------------
@@ -110,7 +100,7 @@ public class GlobalExceptionHandler {
      * @return structured response with field-level error messages
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<TmsApiResponse<Map<String, String>>> handleValidation(
+    public TmsApiResponse<Map<String, String>> handleValidation(
             MethodArgumentNotValidException ex, HttpServletRequest req) {
 
         // Collect validation errors into a field → message map
@@ -125,25 +115,16 @@ public class GlobalExceptionHandler {
                 ));
 
         log.warn("400 Validation failed on {}: {}", req.getRequestURI(), details);
-
-        TmsApiResponse<Map<String, String>> body = new TmsApiResponse<>(
-                false,
-                HttpStatus.BAD_REQUEST.value(),
-                HttpStatus.BAD_REQUEST.getReasonPhrase(),
-                "Validation failed: required/invalid fields present",
-                details,
-                LocalDateTime.now()
-        );
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+        return TmsApiResponse.validationError(details);
     }
 
     /**
      * Handles validation failures in query/path params (e.g., @Min, @Pattern).
      */
     @ExceptionHandler(ConstraintViolationException.class)
-    public ResponseEntity<TmsApiResponse<?>> pathQueryValidation(ConstraintViolationException ex) {
+    public TmsApiResponse<Void> pathQueryValidation(ConstraintViolationException ex) {
         log.error("ConstraintViolationException handled: {}", ex.getMessage());
-        return wrap(HttpStatus.BAD_REQUEST, "Validation failed: " + ex.getMessage(), null);
+        return TmsApiResponse.failure(HttpStatus.BAD_REQUEST, "Validation failed: " + ex.getMessage(), null);
     }
 
     /**
@@ -159,27 +140,18 @@ public class GlobalExceptionHandler {
      * Handles illegal arguments passed to APIs or services.
      */
     @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<TmsApiResponse<?>> badRequest(IllegalArgumentException ex) {
+    public TmsApiResponse<Void> badRequest(IllegalArgumentException ex) {
         log.error("IllegalArgumentException handled: {}", ex.getMessage());
-        return wrap(HttpStatus.BAD_REQUEST, ex.getMessage(), null);
-    }
+        return TmsApiResponse.failure(HttpStatus.BAD_REQUEST, ex.getMessage(), null);    }
 
     /**
      * Fallback handler for all uncaught/unexpected exceptions.
      */
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<TmsApiResponse<Void>> handleOther(Exception ex, HttpServletRequest req) {
+    public TmsApiResponse<Void> handleOther(Exception ex, HttpServletRequest req) {
         log.error("500 Internal error on {}: {}", req.getRequestURI(), ex.getMessage(), ex);
+        return TmsApiResponse.failure(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error", null);
 
-        TmsApiResponse<Void> body = new TmsApiResponse<>(
-                false,
-                HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(),
-                "Unexpected error",
-                null,
-                LocalDateTime.now()
-        );
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
     }
 
     // ------------------------------------------------------------------------
@@ -200,13 +172,14 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
-    public ResponseEntity<TmsApiResponse<?>> dbConflicts(DataIntegrityViolationException ex) {
+    public TmsApiResponse<Void> dbConflicts(DataIntegrityViolationException ex) {
         String cause = ex.getMostSpecificCause().getMessage();
         if (cause != null && cause.contains("uq_clients_company_email_unique")) {
-            return wrap(HttpStatus.CONFLICT, "Email already in use for this company", null);
+            log.error("DataIntegrityViolationException handled: {}", cause);
+            return TmsApiResponse.failure(HttpStatus.CONFLICT, "Email already in use for this company", null);
         }
         log.error("DataIntegrityViolationException handled: {}", cause);
-        return wrap(HttpStatus.CONFLICT, "Unique or FK constraint violated", null);
+        return TmsApiResponse.failure(HttpStatus.CONFLICT, "Unique or FK constraint violated", null);
     }
 
     /**
@@ -220,7 +193,7 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public TmsApiResponse<Void> handleEntityNotFound(EntityNotFoundException ex) {
         log.warn("Entity not found: {}", ex.getMessage());
-        return TmsResponseUtil.failure(HttpStatus.NOT_FOUND, ex.getMessage());
+        return TmsApiResponse.failure(HttpStatus.NOT_FOUND, ex.getMessage(), null);
     }
 
     /**
@@ -235,6 +208,6 @@ public class GlobalExceptionHandler {
     public TmsApiResponse<Void> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
         String message = "HTTP method not supported: " + ex.getMethod();
         log.error(message);
-        return TmsResponseUtil.failure(HttpStatus.METHOD_NOT_ALLOWED, message);
+        return TmsApiResponse.failure(HttpStatus.METHOD_NOT_ALLOWED, message, null);
     }
 }

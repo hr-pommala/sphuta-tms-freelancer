@@ -5,12 +5,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
-
-import net.sphuta.tms.freelancer.config.TmsUserMessagesConfig;
+import net.sphuta.tms.freelancer.constants.TmsMessages;
 import net.sphuta.tms.freelancer.dto.TmsUserDto;
 import net.sphuta.tms.freelancer.response.TmsApiResponse;
 import net.sphuta.tms.freelancer.service.TmsUserService;
-import net.sphuta.tms.freelancer.util.TmsResponseUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -31,8 +29,8 @@ public class TmsUserController {
     @Autowired
     private TmsUserService tmsUserService;
 
-    @Autowired
-    private TmsUserMessagesConfig messagesConfig; // Inject config
+//    @Autowired
+//    private TmsUserMessagesConfig messagesConfig; // Inject config
 
     /**
      * Create a new user in the system.
@@ -50,7 +48,7 @@ public class TmsUserController {
     public TmsApiResponse<TmsUserDto> createUser(@Valid @RequestBody TmsUserDto request) {
         log.info("POST /api/users called with email: {}", request.email());
         var createdUser = tmsUserService.createUser(request);
-        return TmsResponseUtil.created(messagesConfig.getUser().get("create"), createdUser);
+        return TmsApiResponse.created(TmsMessages.USER_CREATED_SUCCESS, createdUser);
     }
 
     /**
@@ -66,7 +64,7 @@ public class TmsUserController {
     public TmsApiResponse<TmsUserDto> getUserById(@PathVariable Integer id) {
         log.info("GET /api/users/{} called", id);
         var user = tmsUserService.getUserById(id);
-        return TmsResponseUtil.success(messagesConfig.getUser().get("retrieve"), user);
+        return TmsApiResponse.success(TmsMessages.USER_RETRIEVED_SUCCESS, user);
     }
 
     /**
@@ -81,7 +79,7 @@ public class TmsUserController {
     public TmsApiResponse<List<TmsUserDto>> getAllUsers() {
         log.info("GET /api/users called");
         var users = tmsUserService.getAllUsers();
-        return TmsResponseUtil.success(messagesConfig.getUser().get("retrieve-all"), users);
+        return TmsApiResponse.success(TmsMessages.USER_RETRIEVED_ALL_SUCCESS, users);
     }
 
     /**
@@ -99,7 +97,7 @@ public class TmsUserController {
                                                  @Valid @RequestBody TmsUserDto request) {
         log.info("PUT /api/users/{} called", id);
         var updatedUser = tmsUserService.updateUser(id, request);
-        return TmsResponseUtil.success(messagesConfig.getUser().get("update"), updatedUser);
+        return TmsApiResponse.success(TmsMessages.USER_UPDATED_SUCCESS, updatedUser);
     }
 
     /**
@@ -116,6 +114,6 @@ public class TmsUserController {
         log.info("DELETE /api/users/{} called", id);
         tmsUserService.deleteUser(id);
         log.debug("User with ID {} deleted successfully", id);
-        return TmsResponseUtil.success(messagesConfig.getUser().get("delete"), null);
+        return TmsApiResponse.success(TmsMessages.USER_DELETED_SUCCESS, null);
     }
 }

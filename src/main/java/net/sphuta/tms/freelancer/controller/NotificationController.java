@@ -2,12 +2,13 @@ package net.sphuta.tms.freelancer.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.extern.slf4j.Slf4j;
+import net.sphuta.tms.freelancer.constants.TmsMessages;
 import net.sphuta.tms.freelancer.dto.NotificationCreateRequest;
 import net.sphuta.tms.freelancer.dto.NotificationListResponse;
+import net.sphuta.tms.freelancer.response.TmsApiResponse;
 import net.sphuta.tms.freelancer.service.NotificationService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -37,7 +38,7 @@ public class NotificationController {
     @GetMapping("/users/{userId}/notifications")
     @Operation(summary = "List unread notifications for a user with pagination",
             description = "Fetches unread notifications for the specified user. Supports pagination via limit and offset query parameters.")
-    public ResponseEntity<NotificationListResponse> listNotifications(
+    public TmsApiResponse<NotificationListResponse> listNotifications(
             @PathVariable("userId") long userId,
             @RequestParam(value = "limit", defaultValue = "20") int limit,
             @RequestParam(value = "offset", defaultValue = "0") int offset
@@ -45,7 +46,7 @@ public class NotificationController {
         log.info("Fetching notifications for userId={} with limit={} and offset={}", userId, limit, offset);
         NotificationListResponse resp = svc.listUnreadNotifications(userId, limit, offset);
         log.debug("Fetched {} notifications for userId={}", resp.items().size(), userId);
-        return ResponseEntity.ok(resp);
+        return TmsApiResponse.success(TmsMessages.NOTIFICATION_FETCH_SUCCESS, resp);
     }
 
     /** Create a new notification for user.
@@ -55,7 +56,7 @@ public class NotificationController {
     @PostMapping("/users/{userId}/notifications")
     @Operation(summary = "Create a new notification for a user",
             description = "Creates a new notification for the specified user. Expects a JSON body with userId, message, and optional link.")
-    public ResponseEntity<Map<String, Object>> createNotification(
+    public TmsApiResponse<Map<String, Object>> createNotification(
             @PathVariable("userId") long userId,
             @Valid @RequestBody NotificationCreateRequest request
     ) {
@@ -64,11 +65,11 @@ public class NotificationController {
 
         if (!Long.valueOf(userId).equals(request.userId())) {
             log.warn("UserId mismatch: path userId={} payload userId={}", userId, request.userId());
-            return ResponseEntity.badRequest().body(Map.of("error", "userId mismatch between path and payload"));
+            return TmsApiResponse.error("userId mismatch between path and payload");
         }
         Long id = svc.createNotification(request);
         log.info("Notification created successfully with id={} for userId={}", id, userId);
-        return ResponseEntity.ok(Map.of("id", id));
+        return TmsApiResponse.created(TmsMessages.NOTIFICATION_CREATE_SUCCESS, Map.of("id", id));
     }
 
     /** Mark a single notification as read by ID.
@@ -78,11 +79,11 @@ public class NotificationController {
     @PostMapping("/notifications/{notificationId}/read")
     @Operation(summary = "Mark a single notification as read",
             description = "Marks the specified notification as read by its ID.")
-    public ResponseEntity<String> markOneRead(@PathVariable("notificationId") long notificationId) {
+    public TmsApiResponse<String> markOneRead(@PathVariable("notificationId") long notificationId) {
         log.info("Marking notificationId={} as read", notificationId);
         svc.markOneRead(notificationId);
         log.debug("Notification {} marked as read", notificationId);
-        return ResponseEntity.ok("Notification " + notificationId + " marked as read");
+        return TmsApiResponse.success(TmsMessages.NOTIFICATION_MARK_READ_SUCCESS + " " + notificationId, null);
     }
 
     /** Mark all notifications as read (all users).
@@ -92,10 +93,10 @@ public class NotificationController {
     @PostMapping("/notifications/read-all")
     @Operation(summary = "Mark all notifications as read",
             description = "Marks all unread notifications as read for all users.")
-    public ResponseEntity<Void> markAllRead() {
+    public TmsApiResponse<Void> markAllRead() {
         log.info("Marking all notifications as read");
         svc.markAllRead();
         log.debug("All unread notifications marked as read");
-        return ResponseEntity.ok().build();
+        return TmsApiResponse.success(TmsMessages.NOTIFICATION_MARK_ALL_READ_SUCCESS, null);
     }
 }

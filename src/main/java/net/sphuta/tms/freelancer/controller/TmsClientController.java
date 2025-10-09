@@ -63,7 +63,7 @@ public class TmsClientController {
      */
     @Operation(summary = "List clients", description = "Fetch paginated list of clients with optional filtering by active status and search keyword")
     @GetMapping
-    public ResponseEntity<TmsApiResponse<List<TmsClientDto>>> getClientlist(
+    public TmsApiResponse<List<TmsClientDto>> getClientlist(
             @RequestParam(defaultValue = "true") String active,
             @RequestParam(defaultValue = "") String search,
             @RequestParam(defaultValue = "0") int page,
@@ -77,9 +77,7 @@ public class TmsClientController {
 
         log.info("Fetched {} clients", result.getNumberOfElements());
 
-        return ResponseEntity.ok(
-                TmsApiResponse.success(HttpStatus.OK, TmsMessages.MSG_CLIENTS_FETCHED, result.getContent())
-        );
+        return TmsApiResponse.success(TmsMessages.MSG_CLIENTS_FETCHED, result.getContent());
     }
 
     // ------------------------------------------------------------------------
@@ -94,14 +92,12 @@ public class TmsClientController {
      */
     @Operation(summary = "Get a client by ID", description = "Fetch a single client by its unique identifier")
     @GetMapping("/{id}")
-    public ResponseEntity<TmsApiResponse<TmsClientDto>> get(@PathVariable int id) {
+    public TmsApiResponse<TmsClientDto> get(@PathVariable int id) {
         log.debug("Fetching client with id={}", id);
         TmsClientDto dto = service.get(id);
         log.info("Client fetched successfully | id={}", id);
 
-        return ResponseEntity.ok(
-                TmsApiResponse.success(HttpStatus.OK, TmsMessages.MSG_CLIENT_FETCHED, dto)
-        );
+        return TmsApiResponse.success(TmsMessages.MSG_CLIENT_FETCHED, dto);
     }
 
     // ------------------------------------------------------------------------
@@ -117,7 +113,7 @@ public class TmsClientController {
      */
     @Operation(summary = "Create a client")
     @PostMapping
-    public ResponseEntity<TmsApiResponse<TmsClientDto>> create(
+    public TmsApiResponse<TmsClientDto> create(
             @Valid @RequestBody TmsClientDto req, HttpServletRequest http) {
 
         log.debug("Creating client with payload: {}", req);
@@ -126,8 +122,7 @@ public class TmsClientController {
 
         log.info("Client created successfully | id={}", saved.id());
 
-        return ResponseEntity.created(location)
-                .body(TmsApiResponse.success(HttpStatus.CREATED, TmsMessages.MSG_CLIENT_CREATED, saved));
+        return TmsApiResponse.created(TmsMessages.MSG_CLIENT_CREATED, saved);
     }
 
     // ------------------------------------------------------------------------
@@ -143,16 +138,14 @@ public class TmsClientController {
      */
     @Operation(summary = "Replace a client (PUT)")
     @PutMapping("/{id}")
-    public ResponseEntity<TmsApiResponse<TmsClientDto>> replace(
+    public TmsApiResponse<TmsClientDto> replace(
             @PathVariable int id, @Valid @RequestBody TmsClientDto req) {
 
         log.debug("Replacing client id={} with payload={}", id, req);
         TmsClientDto resp = service.update(id, req);
         log.info("Client replaced successfully | id={}", id);
 
-        return ResponseEntity.ok(
-                TmsApiResponse.success(HttpStatus.OK, TmsMessages.MSG_CLIENT_REPLACED, resp)
-        );
+        return TmsApiResponse.success(TmsMessages.MSG_CLIENT_REPLACED, resp);
     }
 
 
@@ -168,14 +161,12 @@ public class TmsClientController {
      */
     @Operation(summary = "Delete a client")
     @DeleteMapping("/{id}")
-    public ResponseEntity<TmsApiResponse<Void>> delete(@PathVariable int id) {
+    public TmsApiResponse<Void> delete(@PathVariable int id) {
         log.debug("Deleting client with id={}", id);
         service.delete(id);
         log.info("Client deleted successfully | id={}", id);
 
-        return ResponseEntity.ok(
-                TmsApiResponse.success(HttpStatus.OK, TmsMessages.MSG_CLIENT_DELETED, null)
-        );
+        return TmsApiResponse.success(TmsMessages.MSG_CLIENT_DELETED, null);
     }
 
     // ------------------------------------------------------------------------
@@ -190,14 +181,12 @@ public class TmsClientController {
      */
     @Operation(summary = "Archive a client")
     @PostMapping("/{id}/archive")
-    public ResponseEntity<TmsApiResponse<TmsClientDto>> archive(@PathVariable int id) {
+    public TmsApiResponse<TmsClientDto> archive(@PathVariable int id) {
         log.debug("Archiving client id={}", id);
         TmsClientDto resp = service.archive(id);
         log.info("Client archived successfully | id={}", id);
 
-        return ResponseEntity.ok(
-                TmsApiResponse.success(HttpStatus.OK, TmsMessages.MSG_CLIENT_ARCHIVED, resp)
-        );
+        return TmsApiResponse.success(TmsMessages.MSG_CLIENT_ARCHIVED, resp);
     }
 
     /**
@@ -208,14 +197,12 @@ public class TmsClientController {
      */
     @Operation(summary = "Unarchive a client")
     @PostMapping("/{id}/unarchive")
-    public ResponseEntity<TmsApiResponse<TmsClientDto>> unarchive(@PathVariable int id) {
+    public TmsApiResponse<TmsClientDto> unarchive(@PathVariable int id) {
         log.debug("Unarchiving client id={}", id);
         TmsClientDto resp = service.unarchive(id);
         log.info("Client unarchived successfully | id={}", id);
 
-        return ResponseEntity.ok(
-                TmsApiResponse.success(HttpStatus.OK, TmsMessages.MSG_CLIENT_UNARCHIVED, resp)
-        );
+        return TmsApiResponse.success( TmsMessages.MSG_CLIENT_UNARCHIVED, resp);
     }
 
     // ------------------------------------------------------------------------

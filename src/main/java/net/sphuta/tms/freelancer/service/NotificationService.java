@@ -17,7 +17,7 @@ public interface NotificationService {
      */
     NotificationListResponse listUnreadNotifications(long userId, int limit, int offset);
 
-    /** Create a new notification for a user.
+    /**Create a new notification for a user.
      * @param req NotificationCreateRequest containing userId, message, and optional link
      * @return ID of the created notification
      */

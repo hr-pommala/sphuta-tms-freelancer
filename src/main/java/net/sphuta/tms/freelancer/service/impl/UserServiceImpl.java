@@ -1,6 +1,7 @@
 package net.sphuta.tms.freelancer.service.impl;
 
 import lombok.extern.slf4j.Slf4j;
+import net.sphuta.tms.freelancer.constants.TmsMessages;
 import net.sphuta.tms.freelancer.dto.AuthRequests;
 import net.sphuta.tms.freelancer.dto.AuthResponses;
 import net.sphuta.tms.freelancer.entity.PasswordResetToken;
@@ -67,11 +68,11 @@ public class UserServiceImpl implements UserService {
 
         if (!decryptedPassword.equals(decryptedConfirmPassword)) {
             log.warn("Signup failed for email={} - passwords do not match", req.email());
-            throw new IllegalArgumentException("Passwords do not match");
+            throw new IllegalArgumentException(TmsMessages.PASSWORD_MISMATCH);
         }
         if (userRepo.existsByEmail(req.email())) {
             log.warn("Signup failed for email={} - email already registered", req.email());
-            throw new IllegalArgumentException("Email already registered");
+            throw new IllegalArgumentException(TmsMessages.EMAIL_ALREADY_EXISTS);
         }
         String username = (req.firstName() + "." + Optional.ofNullable(req.lastName()).orElse("")).toLowerCase().replaceAll("\\s+","");
         var user = User.builder()
@@ -116,12 +117,12 @@ public class UserServiceImpl implements UserService {
 
         var user = opt.orElseThrow(() -> {
             log.warn("Login failed - user not found for principal={}", emailOrUsername);
-            return new IllegalArgumentException("Email doesn't exist");
+            return new IllegalArgumentException(TmsMessages.EMAIL_NOT_FOUND);
         });
 
         if (!passwordEncoder.matches(decryptedPassword, user.getPasswordHash())) {
             log.warn("Login failed - invalid credentials for user id={}", user.getId());
-            throw new IllegalArgumentException("Invalid credentials");
+            throw new IllegalArgumentException(TmsMessages.INVALID_CREDENTIALS);
         }
         // Generate token
         String token = jwtUtil.generateToken(user.getEmail(), user.getRoles());
@@ -143,7 +144,7 @@ public class UserServiceImpl implements UserService {
 
         var user = userRepo.findByEmail(email).orElseThrow(() -> {
             log.warn("Forgot flow requested for non-existent email={}", email);
-            return new IllegalArgumentException("Email doesn't exist");
+            return new IllegalArgumentException(TmsMessages.EMAIL_NOT_FOUND);
         });
 
         tokenRepo.deleteByEmail(email); // remove previous tokens
@@ -177,7 +178,7 @@ public class UserServiceImpl implements UserService {
 
         if (!Objects.equals(newPassword, confirmPassword)) {
             log.warn("Reset password failed for email={} - passwords mismatch", email);
-            throw new IllegalArgumentException("Passwords mismatch");
+            throw new IllegalArgumentException(TmsMessages.PASSWORD_MISMATCH);
         }
 
         // Decrypt password from UI
@@ -185,7 +186,7 @@ public class UserServiceImpl implements UserService {
         var user = userRepo.findByEmail(email)
                 .orElseThrow(() -> {
                     log.warn("Reset password failed - email not found: {}", email);
-                    return new IllegalArgumentException("Email doesn't exist");
+                    return new IllegalArgumentException(TmsMessages.EMAIL_NOT_FOUND);
                 });
         user.setPasswordHash(passwordEncoder.encode(decryptedPassword));
         userRepo.save(user);

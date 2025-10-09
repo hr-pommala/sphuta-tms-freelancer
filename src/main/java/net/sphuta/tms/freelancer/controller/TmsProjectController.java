@@ -3,7 +3,7 @@ package net.sphuta.tms.freelancer.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
-import net.sphuta.tms.freelancer.constants.ApiMessageConstants;
+import net.sphuta.tms.freelancer.constants.TmsMessages;
 import net.sphuta.tms.freelancer.dto.TmsClientDto;
 import net.sphuta.tms.freelancer.dto.TmsProjectDto;
 import net.sphuta.tms.freelancer.response.TmsPageResponse;
@@ -78,12 +78,9 @@ public class TmsProjectController {
         // Build page metadata (page number, size, total elements, total pages)
         var meta = new TmsPageResponse.PageMeta(p.getNumber(), p.getSize(), p.getTotalElements(), p.getTotalPages());
 
-        // Wrap result in standardized API response
-        var resp = TmsApiResponse.success(HttpStatus.OK, ApiMessageConstants.CLIENTS_FETCHED, new TmsPageResponse<>(p.getContent(), meta));
-
         log.info("Clients list returned: elements={}, totalPages={}, page={}", p.getTotalElements(), p.getTotalPages(), p.getNumber());
+        return TmsApiResponse.success(TmsMessages.CLIENTS_FETCHED, new TmsPageResponse<>(p.getContent(), meta));
 
-        return resp;
     }
 
     /* ============================================================
@@ -120,12 +117,8 @@ public class TmsProjectController {
         // Page metadata construction
         var meta = new TmsPageResponse.PageMeta(p.getNumber(), p.getSize(), p.getTotalElements(), p.getTotalPages());
 
-        // Wrap result in API response
-        var resp = TmsApiResponse.success(HttpStatus.OK, ApiMessageConstants.PROJECTS_FETCHED_SUCCESS, new TmsPageResponse<>(p.getContent(), meta));
-
         log.info("Projects list returned: elements={}, totalPages={}, page={}", p.getTotalElements(), p.getTotalPages(), p.getNumber());
-
-        return resp;
+        return TmsApiResponse.success(TmsMessages.PROJECTS_FETCHED_SUCCESS, new TmsPageResponse<>(p.getContent(), meta));
     }
 
     /**
@@ -139,7 +132,7 @@ public class TmsProjectController {
             description = "Creates a new project under a client and returns the created resource with location header."
     )
     @PostMapping("/projects")
-    public ResponseEntity<TmsApiResponse<TmsProjectDto>> create(
+    public TmsApiResponse<TmsProjectDto> create(
             @Validated(TmsProjectDto.Create.class) @RequestBody TmsProjectDto in) {
 
         log.debug("POST /projects create requested for name='{}', code='{}'", in.projectName(), in.code());
@@ -150,12 +143,9 @@ public class TmsProjectController {
         // Build resource URI for Location header
         var location = URI.create("/api/v1/projects/" + created.id());
 
-        // Wrap result in standardized API response
-        var resp = TmsApiResponse.success(HttpStatus.CREATED, ApiMessageConstants.PROJECT_CREATED, created);
-
         log.info("Project created: id={}, location={}", created.id(), location);
 
-        return ResponseEntity.created(location).body(resp);
+        return TmsApiResponse.created(TmsMessages.PROJECT_CREATED, created);
     }
 
     /**
@@ -181,7 +171,7 @@ public class TmsProjectController {
 
         log.info("Project fully updated: id={}", id);
 
-        return TmsApiResponse.success(HttpStatus.OK, ApiMessageConstants.PROJECT_UPDATED, updated);
+        return TmsApiResponse.success(TmsMessages.PROJECT_UPDATED, updated);
     }
 
     /**
@@ -204,7 +194,7 @@ public class TmsProjectController {
 
         log.info("Project archived: id={}", id);
 
-        return TmsApiResponse.success(HttpStatus.OK, ApiMessageConstants.PROJECT_ARCHIVED, archived);
+        return TmsApiResponse.success(TmsMessages.PROJECT_ARCHIVED, archived);
     }
 
     /**
@@ -227,7 +217,7 @@ public class TmsProjectController {
 
         log.info("Project unarchived: id={}", id);
 
-        return TmsApiResponse.success(HttpStatus.OK, ApiMessageConstants.PROJECT_UNARCHIVED, unarchived);
+        return TmsApiResponse.success(TmsMessages.PROJECT_UNARCHIVED, unarchived);
     }
 
     /**
@@ -250,7 +240,7 @@ public class TmsProjectController {
 
         log.info("Project deleted: id={}", id);
 
-        return TmsApiResponse.success(HttpStatus.OK, ApiMessageConstants.PROJECT_DELETED, null);
+        return TmsApiResponse.success(TmsMessages.PROJECT_DELETED, null);
     }
 
 }
