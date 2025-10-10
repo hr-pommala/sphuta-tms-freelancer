@@ -29,9 +29,6 @@ public class TmsUserController {
     @Autowired
     private TmsUserService tmsUserService;
 
-//    @Autowired
-//    private TmsUserMessagesConfig messagesConfig; // Inject config
-
     /**
      * Create a new user in the system.
      *

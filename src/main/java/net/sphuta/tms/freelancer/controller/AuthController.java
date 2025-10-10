@@ -108,23 +108,6 @@ public class AuthController {
         log.info("Password successfully reset for email={}", req.email());
         return TmsApiResponse.success(TmsMessages.PASSWORD_UPDATED, new AuthResponses.ApiMessage(TmsMessages.PASSWORD_UPDATED));
     }
-//
-//    /**
-//     * Retrieves information about the currently authenticated user.
-//     *
-//     * @param auth The Authorization header containing the JWT token.
-//     * @return A response entity with a greeting message including the user's email.
-//     */
-//    @GetMapping("/me")
-//    @Operation(summary = "Get current authenticated user info", description = "Returns info about the current user")
-//    public ResponseEntity<?> me(@RequestHeader("Authorization") String auth) {
-//        log.info("Fetching current authenticated user info");
-//        // simple endpoint to return current user name (subject) - Subject is email
-//        var subject = org.springframework.security.core.context.SecurityContextHolder
-//                .getContext().getAuthentication().getName();
-//        log.debug("Current authenticated user subject={}", subject);
-//        return ResponseEntity.ok(new AuthResponses.ApiMessage("hello " + subject));
-//    }
 
     /**
      * Logs out the user by revoking the current JWT token.

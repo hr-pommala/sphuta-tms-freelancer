@@ -128,15 +128,6 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Handles database integrity violations (e.g., duplicate key, FK constraint).
-     */
-//    @ExceptionHandler(DataIntegrityViolationException.class)
-//    public ResponseEntity<TmsApiResponse<?>> dbConflicts(DataIntegrityViolationException ex) {
-//        log.error("DataIntegrityViolationException handled: {}", ex.getMostSpecificCause().getMessage());
-//        return wrap(HttpStatus.CONFLICT, "Unique or FK constraint violated", null);
-//    }
-
-    /**
      * Handles illegal arguments passed to APIs or services.
      */
     @ExceptionHandler(IllegalArgumentException.class)

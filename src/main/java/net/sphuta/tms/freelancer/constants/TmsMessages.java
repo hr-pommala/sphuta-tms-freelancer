@@ -21,24 +21,8 @@ package net.sphuta.tms.freelancer.constants;
  */
 public final class TmsMessages {
 
-
-    // ===================== TimeEntryController =====================
-//    public static final String TIME_ENTRY_BASE_PATH = "/api/v1/time-entries";
-//    public static final String TIME_ENTRY_UNINVOICED_PATH = "/uninvoiced";
-    /**
-     * Private constructor to prevent instantiation.
-     * This ensures that the class is only used as a static utility.
-     */
     private TmsMessages() {}
 
-//    public static final String LOG_TIME_ENTRY_FETCH_REQUEST =
-//            "HTTP GET /time-entries/uninvoiced clientId={}, from={}, to={}";
-//    public static final String LOG_TIME_ENTRY_SUSPICIOUS_RANGE =
-//            "Suspicious date range: from {} > to {} for client {}";
-//    public static final String LOG_TIME_ENTRY_FETCH_SUCCESS_WITH_COUNT =
-//            "Uninvoiced entries fetched for client {} ({} ms, count={})";
-//    public static final String LOG_TIME_ENTRY_FETCH_SUCCESS_NO_COUNT =
-//            "Uninvoiced entries fetched for client {} ({} ms)";
 
     // ===================== ClientController =====================
     public static final String CLIENT_BASE_PATH = "/api/v1/clients";
@@ -54,23 +38,6 @@ public final class TmsMessages {
     public static final String MSG_CLIENT_ARCHIVED = "Client archived";
     public static final String MSG_CLIENT_UNARCHIVED = "Client unarchived";
 
-    // Error messages
-//    public static final String ERR_CLIENT_NOT_FOUND = "Client not found";
-
-//    // Log templates
-//    public static final String LOG_CLIENT_LIST_REQUEST =
-//            "HTTP GET /clients active={}, search='{}', page={}, size={}";
-//    public static final String LOG_CLIENT_GET_BY_ID = "HTTP GET /clients/{} (fetch by id)";
-//    public static final String LOG_CLIENT_CREATE_REQUEST =
-//            "HTTP POST /clients email={}, companyName={}";
-//    public static final String LOG_CLIENT_UPDATE_REQUEST = "HTTP PUT /clients/{} (replace)";
-//    public static final String LOG_CLIENT_PATCH_REQUEST = "HTTP PATCH /clients/{} (partial update)";
-//    public static final String LOG_CLIENT_DELETE_REQUEST = "HTTP DELETE /clients/{}";
-//    public static final String LOG_CLIENT_ARCHIVE_REQUEST = "HTTP POST /clients/{}/archive";
-//    public static final String LOG_CLIENT_UNARCHIVE_REQUEST = "HTTP POST /clients/{}/unarchive";
-//    public static final String LOG_CLIENT_EXPORT_REQUEST =
-//            "HTTP GET /clients/export active='{}', search='{}'";
-//
     //--------------------- Timesheets and TimeEntries ------------------
     public static final String TIMESHEET_SUBMITTED = "Timesheet submitted successfully";
     public static final String TIMESHEET_DELETED = "Timesheet deleted successfully";
@@ -90,32 +57,6 @@ public final class TmsMessages {
     public static final String TIMESHEET_CONFLICT     = "Timesheet for project & period already exists";
 ;    public static final String USER_NOT_FOUND         = "User not found";
 
-
-//    // ===================== EstimateController =====================
-//    public static final String ESTIMATE_BASE_PATH = "/api/v1/estimates";
-//
-//    public static final String LOG_ESTIMATE_CREATE_REQUEST = "HTTP POST /estimates for client {}";
-//    public static final String LOG_ESTIMATE_NO_ITEMS_WARN = "Estimate create request has no items for client {}";
-//    public static final String LOG_ESTIMATE_ITEMS_TRACE = "Estimate create request contains {} item(s)";
-//    public static final String LOG_ESTIMATE_CREATED_SUCCESS =
-//            "Estimate {} created for client {} ({} ms)";
-
-//    // ===================== InvoiceController =====================
-//    public static final String INVOICE_BASE_PATH = "/api/v1/invoices";
-//    public static final String INVOICE_SEND_PATH = "/{invoiceId}/send";
-//
-//    public static final String LOG_INVOICE_CREATE_REQUEST = "HTTP POST /invoices for client {}";
-//    public static final String LOG_INVOICE_NO_TIME_ENTRIES_WARN =
-//            "Invoice create request received with no timeEntryIds for client {}";
-//    public static final String LOG_INVOICE_TIME_ENTRIES_TRACE =
-//            "Invoice create request contains {} timeEntryIds";
-//    public static final String LOG_INVOICE_CREATED_SUCCESS =
-//            "Invoice {} created for client {} ({} ms)";
-//
-//    public static final String LOG_INVOICE_SEND_REQUEST =
-//            "HTTP POST /invoices/{}/send";
-//    public static final String LOG_INVOICE_SENT_SUCCESS =
-//            "Invoice {} sent (status={}, {} ms)";
 
     // ---------------- Task messages ----------------
 

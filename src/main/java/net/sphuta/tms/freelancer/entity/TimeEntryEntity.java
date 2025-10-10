@@ -86,11 +86,4 @@ public class TimeEntryEntity {
     @Column(name = "updated_dt", nullable = false)
     private OffsetDateTime updatedDt;
 
-
-//    // ----------------------------
-//    // Enum for Workflow Status
-//    // ----------------------------
-//    public enum Status {
-//        PENDING, APPROVED, REJECTED
-//    }
 }

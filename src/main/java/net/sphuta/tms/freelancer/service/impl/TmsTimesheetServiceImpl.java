@@ -1,6 +1,7 @@
 package net.sphuta.tms.freelancer.service.impl;
 
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
 import net.sphuta.tms.freelancer.constants.TmsMessages;
 import net.sphuta.tms.freelancer.dto.BulkUpsertDto;
@@ -10,7 +11,6 @@ import net.sphuta.tms.freelancer.entity.ProjectEntity;
 import net.sphuta.tms.freelancer.entity.TimeEntryEntity;
 import net.sphuta.tms.freelancer.entity.TimesheetEntity;
 import net.sphuta.tms.freelancer.enums.TimesheetStatus;
-import net.sphuta.tms.freelancer.exception.ApiExceptions;
 import net.sphuta.tms.freelancer.exception.ConflictException;
 import net.sphuta.tms.freelancer.exception.NotFoundException;
 import net.sphuta.tms.freelancer.repository.*;
@@ -233,7 +233,7 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
 
         if (req.periodEnd().isBefore(req.periodStart())) {
             log.error("Validation failed: periodEnd={} is before periodStart={}", req.periodEnd(), req.periodStart());
-            throw new ApiExceptions.ValidationException("periodEnd must be >= periodStart");
+            throw new ValidationException("periodEnd must be >= periodStart");
         }
 
         if (Optional.ofNullable(req.projectId()).filter(projectRepository::existsById).isEmpty()) {
@@ -323,17 +323,21 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
             log.debug("Processing entry: date={}, desc='{}', hours={}, rate={}, taskId={}",
                     r.entryDate(), r.description(), r.hours(), r.rateAtEntry(), r.taskId());
 
-            // validate date within timesheet period
-//            if (r.entryDate().isBefore(t.getPeriodStart()) || r.entryDate().isAfter(t.getPeriodEnd())) {
-//                log.warn("Validation failed: entry outside period. entry={}, period={}..{}",
-//                        r.entryDate(), t.getPeriodStart(), t.getPeriodEnd());
-//                throw new ApiExceptions.ValidationException("Some entries invalid: outside period");
-//            }
+            // fetch project start date
+            LocalDate projectStartDate = projectRepository.findById(t.getProjectId())
+                    .map(ProjectEntity::getStartDate)
+                    .orElseThrow(() -> new NotFoundException(TmsMessages.PROJECT_NOT_FOUND));
 
+            // updated validation logic
+            if (r.entryDate().isBefore(projectStartDate) || r.entryDate().isAfter(t.getPeriodEnd())) {
+                log.warn("Validation failed: entry outside project range. entry={}, projectStart={} periodEnd={}",
+                        r.entryDate(), projectStartDate, t.getPeriodEnd());
+                throw new ValidationException("Entry date outside project active range");
+            }
             // validate hours > 0
             if (Optional.ofNullable(r.hours()).filter(h -> h.compareTo(BigDecimal.ZERO) > 0).isEmpty()) {
                 log.warn("Validation failed: entry with invalid hours. entry={}", r);
-                throw new ApiExceptions.ValidationException(TmsMessages.HOURS_INVALID);
+                throw new ValidationException(TmsMessages.HOURS_INVALID);
             }
 
             // check existing by timesheet + date + description
