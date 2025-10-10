@@ -53,10 +53,10 @@ public class TmsProjectController {
      * Returns a paginated list of clients for the Owner dropdown.
      * Can be filtered by active status and search term.
      *
-     * @param active filter flag (true to fetch only active clients)
-     * @param search optional case-insensitive name search
-     * @param page   0-based page index
-     * @param size   page size
+     *  - active: filter flag (true to fetch only active clients)
+     *  - search optional case-insensitive name search
+     *  - page   0-based page index
+     *  - size   page size
      * @return standardized response with client DTOs + pagination metadata
      */
     @Operation(
@@ -65,15 +65,12 @@ public class TmsProjectController {
     )
     @GetMapping("/clients")
     public TmsApiResponse<TmsPageResponse<TmsClientDto>> listClients(
-            @RequestParam(defaultValue = "true") boolean active,
-            @RequestParam(defaultValue = "") String search,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "100") int size) {
+            @RequestBody TmsClientDto filters) {
 
-        log.debug("GET /clients called: active={}, search='{}', page={}, size={}", active, search, page, size);
+        log.info("Fetching clients for project assignment with filters: {}", filters);
 
         // Delegate to service for paginated client retrieval
-        var p = service.listClients(search, page, size);
+        var p = service.listClients(filters);
 
         // Build page metadata (page number, size, total elements, total pages)
         var meta = new TmsPageResponse.PageMeta(p.getNumber(), p.getSize(), p.getTotalElements(), p.getTotalPages());
@@ -90,11 +87,13 @@ public class TmsProjectController {
     /**
      * Lists projects with filters such as active/archived, by client, and search.
      *
-     * @param active   filter flag (true=active, false=archived)
-     * @param clientId optional filter by client ID (owner)
-     * @param search   optional case-insensitive search on project fields
-     * @param page     0-based page index
-     * @param size     page size
+     *@param filters filter DTO containing:
+      *<ul>
+      *    <li>{@link TmsProjectDto active} – true for active projects, false for archived</li>
+      *    <li>{@link TmsProjectDto search} – optional case-insensitive substring search on project name</li>
+      *    <li>{@link TmsProjectDto page page} – 0-based page index</li>
+      *    <li>{@link TmsProjectDto size size} – number of items per page</li>
+      *</ul>
      * @return standardized response with project DTOs + pagination metadata
      */
     @Operation(
@@ -103,16 +102,12 @@ public class TmsProjectController {
     )
     @GetMapping("/projects")
     public TmsApiResponse<TmsPageResponse<TmsProjectDto>> listProjects(
-            @RequestParam(defaultValue = "true") boolean active,
-            @RequestParam(required = false) Integer clientId,
-            @RequestParam(defaultValue = "") String search,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "25") int size) {
+           @ModelAttribute TmsProjectDto filters) {
 
-        log.debug("GET /projects called: active={}, clientId={}, search='{}', page={}, size={}", active, clientId, search, page, size);
+        log.debug("GET /projects called with filters: {}", filters);
 
         // Delegate to service for project retrieval
-        var p = service.listProjects(active, clientId, search, page, size);
+        var p = service.listProjects(filters);
 
         // Page metadata construction
         var meta = new TmsPageResponse.PageMeta(p.getNumber(), p.getSize(), p.getTotalElements(), p.getTotalPages());

@@ -54,31 +54,25 @@ public class TmsClientController {
 
     /**
      * Fetch paginated list of clients.
-     *
-     * @param active filter by active status ("true", "false", "all")
-     * @param search search keyword
-     * @param page   page number
-     * @param size   page size
+     * @params
+     *  - active: filter by active status ("true", "false", "all")
+     *  - search: search keyword
+     *  - page:   page number
+     *  - size:   page size
      * @return list of clients wrapped in {@link TmsApiResponse}
      */
     @Operation(summary = "List clients", description = "Fetch paginated list of clients with optional filtering by active status and search keyword")
     @GetMapping
-    public TmsApiResponse<List<TmsClientDto>> getClientlist(
-            @RequestParam(defaultValue = "true") String active,
-            @RequestParam(defaultValue = "") String search,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "25") int size) {
+    public TmsApiResponse<List<TmsClientDto>> listClients(@ModelAttribute TmsClientDto filters) {
+        log.debug("Fetching clients | active={}, search={}, page={}, size={}",
+                filters.active(), filters.search(), filters.page(), filters.size());
 
-        log.debug("Fetching clients | active={}, search={}, page={}, size={}", active, search, page, size);
-
-        Page<TmsClientDto> result = "all".equalsIgnoreCase(active)
-                ? service.listAll(search, page, size)
-                : service.getClientlist(Boolean.parseBoolean(active), search, page, size);
+        Page<TmsClientDto> result = service.listClients(filters);
 
         log.info("Fetched {} clients", result.getNumberOfElements());
-
         return TmsApiResponse.success(TmsMessages.MSG_CLIENTS_FETCHED, result.getContent());
     }
+
 
     // ------------------------------------------------------------------------
     // GET CLIENT

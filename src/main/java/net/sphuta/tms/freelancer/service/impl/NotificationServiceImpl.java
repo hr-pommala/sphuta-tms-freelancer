@@ -75,8 +75,13 @@ public class NotificationServiceImpl implements NotificationService {
      */
     @Override
     @Transactional
-    public Long createNotification(NotificationCreateRequest req) {
+    public Long createNotification(NotificationCreateRequest req, Long userId) {
         log.info("createNotification called for userId={}", req.userId());
+
+        if (!userId.equals(req.userId())) {
+            log.warn("UserId mismatch: path userId={} payload userId={}", userId, req.userId());
+            throw new IllegalArgumentException("userId mismatch between path and payload");
+        }
 
         // ✅ Validate user exists
         if (!userRepo.existsById(req.userId())) {

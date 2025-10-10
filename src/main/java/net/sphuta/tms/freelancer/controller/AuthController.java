@@ -7,6 +7,7 @@ import net.sphuta.tms.freelancer.dto.AuthRequests;
 import net.sphuta.tms.freelancer.dto.AuthResponses;
 import net.sphuta.tms.freelancer.entity.RevokedToken;
 import net.sphuta.tms.freelancer.repository.RevokedTokenRepository;
+import net.sphuta.tms.freelancer.response.TmsApiResponse;
 import net.sphuta.tms.freelancer.security.JwtUtil;
 import net.sphuta.tms.freelancer.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,9 +57,10 @@ public class AuthController {
      */
     @PostMapping("/signup")
     @Operation(summary="Sign up a new user", description = "Returns JWT token on success")
-    public ResponseEntity<AuthResponses.JwtResponse> signup(@RequestBody AuthRequests.SignupRequest req) {
+    public TmsApiResponse<AuthResponses.JwtResponse> signup(@RequestBody AuthRequests.SignupRequest req) {
         log.info("Received signup request for email={}", req.email());
-        return ResponseEntity.ok(userService.signup(req));
+        var jwtResponse = userService.signup(req);
+        return TmsApiResponse.created(TmsMessages.USER_REGISTERED_SUCCESS, jwtResponse);
     }
 
     /**
@@ -69,10 +71,11 @@ public class AuthController {
      */
     @PostMapping("/login")
     @Operation(summary="Login user", description = "Returns JWT token on success")
-    public ResponseEntity<AuthResponses.JwtResponse> login(@RequestBody AuthRequests.LoginRequest req) {
+    public TmsApiResponse<AuthResponses.JwtResponse> login(@RequestBody AuthRequests.LoginRequest req) {
         log.info("Login request received for principal={}", req.emailOrUsername());
+        var jwtResponse = userService.login(req.emailOrUsername(), req.password());
         log.info("Login successful for principal={}", req.emailOrUsername());
-        return ResponseEntity.ok(userService.login(req.emailOrUsername(), req.password()));
+        return TmsApiResponse.success(TmsMessages.LOGIN_SUCCESS, jwtResponse);
     }
 
     /**
@@ -83,12 +86,13 @@ public class AuthController {
      */
     @PostMapping("/forgot")
     @Operation(summary="Start forgot password flow", description = "Sends reset link to registered email if exists")
-    public ResponseEntity<AuthResponses.ApiMessage> forgot(@RequestBody AuthRequests.ForgotRequest req) {
+    public TmsApiResponse<AuthResponses.ApiMessage> forgot(@RequestBody AuthRequests.ForgotRequest req) {
         log.info("Forgot password request received for email={}", req.email());
         userService.startForgotFlow(req.email());
         log.info("Forgot password process initiated for email={}", req.email());
-        return ResponseEntity.ok(new AuthResponses.ApiMessage(TmsMessages.RESET_LINK_SENT));
+        return TmsApiResponse.success(TmsMessages.RESET_LINK_SENT, new AuthResponses.ApiMessage(TmsMessages.RESET_LINK_SENT));
     }
+
 
     /**
      * Resets the user's password using their email.
@@ -98,29 +102,29 @@ public class AuthController {
      */
     @PostMapping("/reset")
     @Operation(summary="Reset password using email (no token)", description = "Resets password directly using email")
-    public ResponseEntity<AuthResponses.ApiMessage> reset(@RequestBody AuthRequests.ResetPasswordRequest req) {
+    public TmsApiResponse<AuthResponses.ApiMessage> reset(@RequestBody AuthRequests.ResetPasswordRequest req) {
         log.info("Password reset request received for email={}", req.email());
         userService.resetPasswordByEmail(req.email(), req.newPassword(), req.confirmPassword());
         log.info("Password successfully reset for email={}", req.email());
-        return ResponseEntity.ok(new AuthResponses.ApiMessage(TmsMessages.PASSWORD_UPDATED));
+        return TmsApiResponse.success(TmsMessages.PASSWORD_UPDATED, new AuthResponses.ApiMessage(TmsMessages.PASSWORD_UPDATED));
     }
-
-    /**
-     * Retrieves information about the currently authenticated user.
-     *
-     * @param auth The Authorization header containing the JWT token.
-     * @return A response entity with a greeting message including the user's email.
-     */
-    @GetMapping("/me")
-    @Operation(summary = "Get current authenticated user info", description = "Returns info about the current user")
-    public ResponseEntity<?> me(@RequestHeader("Authorization") String auth) {
-        log.info("Fetching current authenticated user info");
-        // simple endpoint to return current user name (subject) - Subject is email
-        var subject = org.springframework.security.core.context.SecurityContextHolder
-                .getContext().getAuthentication().getName();
-        log.debug("Current authenticated user subject={}", subject);
-        return ResponseEntity.ok(new AuthResponses.ApiMessage("hello " + subject));
-    }
+//
+//    /**
+//     * Retrieves information about the currently authenticated user.
+//     *
+//     * @param auth The Authorization header containing the JWT token.
+//     * @return A response entity with a greeting message including the user's email.
+//     */
+//    @GetMapping("/me")
+//    @Operation(summary = "Get current authenticated user info", description = "Returns info about the current user")
+//    public ResponseEntity<?> me(@RequestHeader("Authorization") String auth) {
+//        log.info("Fetching current authenticated user info");
+//        // simple endpoint to return current user name (subject) - Subject is email
+//        var subject = org.springframework.security.core.context.SecurityContextHolder
+//                .getContext().getAuthentication().getName();
+//        log.debug("Current authenticated user subject={}", subject);
+//        return ResponseEntity.ok(new AuthResponses.ApiMessage("hello " + subject));
+//    }
 
     /**
      * Logs out the user by revoking the current JWT token.
@@ -130,13 +134,13 @@ public class AuthController {
      */
     @PostMapping("/logout")
     @Operation(summary = "Logout user (revoke current JWT)", description = "Revokes the current JWT token")
-    public ResponseEntity<AuthResponses.ApiMessage> logout(
+    public TmsApiResponse<AuthResponses.ApiMessage> logout(
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
         log.info("Logout request received (hasAuthHeader={})", authHeader != null);
         log.debug("Logout Authorization header={}", authHeader);
 
         // Always return OK, even if token was missing/invalid
         log.info("Logout completed successfully");
-        return ResponseEntity.ok(new AuthResponses.ApiMessage(TmsMessages.LOGGED_OUT));
+        return TmsApiResponse.success(TmsMessages.LOGGED_OUT, new AuthResponses.ApiMessage(TmsMessages.LOGGED_OUT));
     }
 }

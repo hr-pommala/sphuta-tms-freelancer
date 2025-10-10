@@ -63,11 +63,7 @@ public class NotificationController {
         log.info("Create notification request received for userId={}", userId);
         log.debug("Notification payload: {}", request);
 
-        if (!Long.valueOf(userId).equals(request.userId())) {
-            log.warn("UserId mismatch: path userId={} payload userId={}", userId, request.userId());
-            return TmsApiResponse.error("userId mismatch between path and payload");
-        }
-        Long id = svc.createNotification(request);
+        Long id = svc.createNotification(request, userId);
         log.info("Notification created successfully with id={} for userId={}", id, userId);
         return TmsApiResponse.created(TmsMessages.NOTIFICATION_CREATE_SUCCESS, Map.of("id", id));
     }

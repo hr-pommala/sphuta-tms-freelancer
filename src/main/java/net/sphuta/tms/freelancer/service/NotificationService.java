@@ -21,7 +21,7 @@ public interface NotificationService {
      * @param req NotificationCreateRequest containing userId, message, and optional link
      * @return ID of the created notification
      */
-    Long createNotification(NotificationCreateRequest req);
+    Long createNotification(NotificationCreateRequest req, Long UserId);
 
     /** Mark a specific notification as read.
      * @param notificationId ID of the notification to mark as read

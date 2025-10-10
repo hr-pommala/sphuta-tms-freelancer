@@ -228,6 +228,8 @@ public final class TmsMessages {
 
     //------------------------- Auth Messages ----------------------------
 
+    public static final String USER_REGISTERED_SUCCESS = "User registered successfully";
+    public static final String LOGIN_SUCCESS = "Login successful";
     public static final String PASSWORD_UPDATED = "Password updated";
     public static final String LOGGED_OUT = "Logged out";
     public static final String PASSWORD_MISMATCH     = "Passwords do not match";

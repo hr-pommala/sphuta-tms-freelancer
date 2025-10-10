@@ -1,9 +1,9 @@
 package net.sphuta.tms.freelancer.controller;
 
-import net.sphuta.tms.freelancer.constants.ApiMessageConstants;
+import net.sphuta.tms.freelancer.constants.TmsMessages;
 import net.sphuta.tms.freelancer.dto.SettingsInvoicingDTO;
+import net.sphuta.tms.freelancer.dto.TmsApiResponse;
 import net.sphuta.tms.freelancer.exception.NotFoundException;
-import net.sphuta.tms.freelancer.response.ApiResponse;
 import net.sphuta.tms.freelancer.service.SettingsInvoicingService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -51,12 +51,12 @@ class SettingsInvoicingControllerTest {
     void testGetAllSettings() {
         when(service.getAllSettings()).thenReturn(List.of(sampleDto));
 
-        ResponseEntity<ApiResponse<List<SettingsInvoicingDTO>>> response = controller.getAllSettings();
+        TmsApiResponse<List<SettingsInvoicingDTO>> response = controller.getAllSettings();
 
-        assertEquals(200, response.getStatusCodeValue());
-        assertEquals(ApiMessageConstants.MSG_FETCH_ALL_SETTINGS, response.getBody().message());
-        assertEquals(1, response.getBody().data().size());
-        assertEquals("success", response.getBody().status());
+        assertEquals(200, response.success());
+        assertEquals(TmsMessages.MSG_FETCH_ALL_SETTINGS, response.message());
+        assertEquals(1, response.data().size());
+        assertEquals("success", response.data().status());
         verify(service, times(1)).getAllSettings();
     }
 
