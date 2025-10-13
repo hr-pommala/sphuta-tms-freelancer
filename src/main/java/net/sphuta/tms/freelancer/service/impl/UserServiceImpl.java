@@ -28,6 +28,7 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final EmailService emailService; // simple console email service
+    private final EmailValidationService emailValidationService;
 
     @Override
     public AuthResponses.JwtResponse signup(AuthRequests.SignupRequest req) {
@@ -40,6 +41,9 @@ public class UserServiceImpl implements UserService {
         if (userRepo.existsByEmail(req.email())) {
             throw new IllegalArgumentException("Email already registered");
         }
+        // ✅ Validate email across both tables
+        emailValidationService.validateEmailUnique(req.email());
+
         String username = (req.firstName() + "." + Optional.ofNullable(req.lastName()).orElse("")).toLowerCase().replaceAll("\\s+","");
         var user = User.builder()
                 .firstName(req.firstName())
@@ -50,7 +54,7 @@ public class UserServiceImpl implements UserService {
                 .phone(req.phone())
                 .countryCode(req.countryCode())
                 .roles(Set.of("ROLE_USER"))
-                .createdAt(Instant.now())
+                .createdDt(Instant.now())
                 .build();
         user = userRepo.save(user);
         String token = jwtUtil.generateToken(user.getEmail(), user.getRoles());

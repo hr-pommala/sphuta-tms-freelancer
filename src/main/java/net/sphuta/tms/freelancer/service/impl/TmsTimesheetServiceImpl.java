@@ -77,7 +77,7 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
 
         TimeEntryEntity.TimeEntryEntityBuilder b = TimeEntryEntity.builder()
                 .timesheet(t)
-                .projectId(t.getProjectId())
+                .projectId(t.getProject().getId())
                 .entryDate(r.entryDate())
                 .description(r.description())
                 .hours(r.hours())
@@ -246,9 +246,11 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
                             req.projectId(), req.periodStart(), req.periodEnd());
                     throw new ConflictException("Timesheet for project & period already exists");
                 });
+        var project = projectRepository.findById(req.projectId())
+                .orElseThrow(() -> new NotFoundException("Project not found"));
 
         TimesheetEntity t = TimesheetEntity.builder()
-                .projectId(req.projectId())
+                .project(project)
                 .periodStart(req.periodStart())
                 .periodEnd(req.periodEnd())
                 .status(TimesheetStatus.DRAFT)

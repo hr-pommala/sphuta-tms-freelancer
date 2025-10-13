@@ -6,7 +6,8 @@ import java.time.Instant;
 import java.util.Set;
 
 @Entity
-@Table(name = "profile_users")
+@Table(name = "auth_users")
+@EntityListeners(net.sphuta.tms.freelancer.listener.AuthUserListener.class)
 @Access(AccessType.FIELD)         // IMPORTANT: use field access only
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor @Builder
@@ -37,5 +38,5 @@ public class User {
     @Column(name = "role")
     private Set<String> roles;
 
-    private Instant createdAt;
+    private Instant createdDt;
 }
