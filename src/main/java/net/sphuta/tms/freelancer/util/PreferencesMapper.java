@@ -65,7 +65,7 @@ public class PreferencesMapper {
                 entity.getDateFormat(),
                 entity.getWeekStartsOn(),
                 entity.getRounding(),
-                entity.getUpdatedAt()
+                entity.getUpdatedDt()
         );
 
         log.info("Exiting toResponse() - Successfully mapped SettingsPreferences entity with userId={} to PreferencesResponse", response.userId());

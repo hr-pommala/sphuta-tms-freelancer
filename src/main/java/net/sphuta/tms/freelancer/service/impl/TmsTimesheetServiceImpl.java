@@ -1,7 +1,9 @@
 package net.sphuta.tms.freelancer.service.impl;
 
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
+import net.sphuta.tms.freelancer.constants.TmsMessages;
 import net.sphuta.tms.freelancer.dto.BulkUpsertDto;
 import net.sphuta.tms.freelancer.dto.TimeEntryDto;
 import net.sphuta.tms.freelancer.dto.TmsTimesheetDto;
@@ -9,7 +11,6 @@ import net.sphuta.tms.freelancer.entity.ProjectEntity;
 import net.sphuta.tms.freelancer.entity.TimeEntryEntity;
 import net.sphuta.tms.freelancer.entity.TimesheetEntity;
 import net.sphuta.tms.freelancer.enums.TimesheetStatus;
-import net.sphuta.tms.freelancer.exception.ApiExceptions;
 import net.sphuta.tms.freelancer.exception.ConflictException;
 import net.sphuta.tms.freelancer.exception.NotFoundException;
 import net.sphuta.tms.freelancer.repository.*;
@@ -232,19 +233,19 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
 
         if (req.periodEnd().isBefore(req.periodStart())) {
             log.error("Validation failed: periodEnd={} is before periodStart={}", req.periodEnd(), req.periodStart());
-            throw new ApiExceptions.ValidationException("periodEnd must be >= periodStart");
+            throw new ValidationException("periodEnd must be >= periodStart");
         }
 
         if (Optional.ofNullable(req.projectId()).filter(projectRepository::existsById).isEmpty()) {
             log.error("Project not found: projectId={}", req.projectId());
-            throw new NotFoundException("Project not found");
+            throw new NotFoundException(TmsMessages.PROJECT_NOT_FOUND);
         }
 
         timesheetRepo.findByProjectIdAndPeriodStartAndPeriodEnd(req.projectId(), req.periodStart(), req.periodEnd())
                 .ifPresent(t -> {
                     log.error("Conflict: Timesheet already exists for projectId={} period {}..{}",
                             req.projectId(), req.periodStart(), req.periodEnd());
-                    throw new ConflictException("Timesheet for project & period already exists");
+                    throw new ConflictException(TmsMessages.TIMESHEET_CONFLICT);
                 });
         var project = projectRepository.findById(req.projectId())
                 .orElseThrow(() -> new NotFoundException("Project not found"));
@@ -271,7 +272,7 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
         var t = timesheetRepo.findById(id)
                 .orElseThrow(() -> {
                     log.error("Timesheet not found: id={}", id);
-                    return new NotFoundException("Timesheet not found");
+                    return new NotFoundException(TmsMessages.TIMESHEET_NOT_FOUND);
                 });
 
         // force load entries
@@ -286,7 +287,7 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
         var t = timesheetRepo.findById(id)
                 .orElseThrow(() -> {
                     log.error("Timesheet not found during submit: id={}", id);
-                    return new NotFoundException("Timesheet not found");
+                    return new NotFoundException(TmsMessages.TIMESHEET_NOT_FOUND);
                 });
 
         t.setStatus(TimesheetStatus.APPROVED);
@@ -309,12 +310,12 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
         var t = timesheetRepo.findById(timesheetId)
                 .orElseThrow(() -> {
                     log.error("Timesheet not found: id={}", timesheetId);
-                    return new NotFoundException("Timesheet not found");
+                    return new NotFoundException(TmsMessages.TIMESHEET_NOT_FOUND);
                 });
 
         if (!t.getStatus().isMutable()) {
             log.error("Timesheet is LOCKED and cannot be modified: id={}", timesheetId);
-            throw new ConflictException("Timesheet is LOCKED and cannot be modified");
+            throw new ConflictException(TmsMessages.TIMESHEET_LOCKED);
         }
 
         int inserted = 0, updated = 0;
@@ -324,17 +325,21 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
             log.debug("Processing entry: date={}, desc='{}', hours={}, rate={}, taskId={}",
                     r.entryDate(), r.description(), r.hours(), r.rateAtEntry(), r.taskId());
 
-            // validate date within timesheet period
-            if (r.entryDate().isBefore(t.getPeriodStart()) || r.entryDate().isAfter(t.getPeriodEnd())) {
-                log.warn("Validation failed: entry outside period. entry={}, period={}..{}",
-                        r.entryDate(), t.getPeriodStart(), t.getPeriodEnd());
-                throw new ApiExceptions.ValidationException("Some entries invalid: outside period");
-            }
+            // fetch project start date
+            LocalDate projectStartDate = projectRepository.findById(t.getProjectId())
+                    .map(ProjectEntity::getStartDate)
+                    .orElseThrow(() -> new NotFoundException(TmsMessages.PROJECT_NOT_FOUND));
 
+            // updated validation logic
+            if (r.entryDate().isBefore(projectStartDate) || r.entryDate().isAfter(t.getPeriodEnd())) {
+                log.warn("Validation failed: entry outside project range. entry={}, projectStart={} periodEnd={}",
+                        r.entryDate(), projectStartDate, t.getPeriodEnd());
+                throw new ValidationException("Entry date outside project active range");
+            }
             // validate hours > 0
             if (Optional.ofNullable(r.hours()).filter(h -> h.compareTo(BigDecimal.ZERO) > 0).isEmpty()) {
                 log.warn("Validation failed: entry with invalid hours. entry={}", r);
-                throw new ApiExceptions.ValidationException("Some entries invalid: hours must be > 0");
+                throw new ValidationException(TmsMessages.HOURS_INVALID);
             }
 
             // check existing by timesheet + date + description
@@ -404,7 +409,7 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
 
         var ts = timesheetRepo.findById(id).orElseThrow(() -> {
             log.warn("Service: timesheet not found id={}", id);
-            return new NotFoundException("Timesheet not found");
+            return new NotFoundException(TmsMessages.TIMESHEET_NOT_FOUND);
         });
 
         var entries = ts.getEntries();
@@ -422,6 +427,12 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
     // -------------------------------------------------------------------------
     // Weekly / Monthly retrievals (RETURN FORMAT CHANGED)
     // -------------------------------------------------------------------------
+
+    /**
+     * Get weekly time entries for a user, aggregated per project.
+     * The week is defined as Monday to Sunday containing today's date.
+     * The returned map is keyed by projectId and contains:
+     **/
     @Override
     @Transactional(readOnly = true)
     public Map<Integer, Map<String, Object>> getWeeklyTimeEntries(String userEmail) {
@@ -436,6 +447,11 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
         return getTimeEntriesForUserForRange(user.getEmail(), weekStart, weekEnd);
     }
 
+    /**
+     * Get monthly time entries for a user, aggregated per project.
+     * The month is defined as the current calendar month.
+     * The returned map is keyed by projectId and contains:
+     **/
     @Override
     @Transactional(readOnly = true)
     public Map<Integer, Map<String, Object>> getMonthlyTimeEntries(String userEmail) {
@@ -469,7 +485,7 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
                                                                             LocalDate rangeStart,
                                                                             LocalDate rangeEnd) {
         var user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new NotFoundException("User not found: " + userEmail));
+                .orElseThrow(() -> new NotFoundException(TmsMessages.USER_NOT_FOUND + userEmail));
 
         log.debug("Building project entries for email={} range {}..{}", userEmail, rangeStart, rangeEnd);
 
@@ -526,7 +542,7 @@ public class TmsTimesheetServiceImpl implements TmsTimesheetService {
         }
 
         if (!projectRepository.existsById(projectId)) {
-            throw new NotFoundException("Project not found: " + projectId);
+            throw new NotFoundException(TmsMessages.PROJECT_NOT_FOUND + projectId);
         }
 
         List<TimesheetEntity> timesheets = timesheetRepo.findByProjectIdAndPeriodOverlapping(projectId, start, end);

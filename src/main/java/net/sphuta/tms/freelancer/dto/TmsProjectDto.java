@@ -21,7 +21,7 @@ public record TmsProjectDto(
         /** Project identifier (response only). */
         @Schema(accessMode = Schema.AccessMode.READ_ONLY)
 //        @Null(groups = {Create.class}, message = "id is auto-generated")
-        int id,
+        Integer id,
 
         /** Linked client info (response only). */
         @Schema(accessMode = Schema.AccessMode.READ_ONLY)
@@ -71,9 +71,22 @@ public record TmsProjectDto(
 
         /** Timestamp when record was last updated (response only). */
         @Schema(accessMode = Schema.AccessMode.READ_ONLY)
-        String updatedDt
+        String updatedDt,
 
-) {
+        /** Pagination & filtering fields (optional) */
+        @Schema(description = "Active/archived filter for listing", accessMode = Schema.AccessMode.READ_ONLY)
+        Boolean active,          // ✅ new field
+
+        @Schema(description = "Search term filter for listing", accessMode = Schema.AccessMode.READ_ONLY)
+        String search,           // ✅ new field
+
+        @Schema(description = "Page number for pagination", accessMode = Schema.AccessMode.READ_ONLY)
+        Integer page,            // ✅ new field
+
+        @Schema(description = "Page size for pagination", accessMode = Schema.AccessMode.READ_ONLY)
+        Integer size
+
+        ) {
     /** Validation groups. */
     public interface Create {}
     public interface Update {}

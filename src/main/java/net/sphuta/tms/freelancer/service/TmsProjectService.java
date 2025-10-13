@@ -24,12 +24,12 @@ public interface TmsProjectService {
     /**
      * Retrieves a paginated list of clients for use in the Owner dropdown.
      *
-     * @param search optional name filter (case-insensitive)
-     * @param page   0-based page index
-     * @param size   number of items per page
+     *  - search: optional name filter (case-insensitive)
+     *  - page:   0-based page index
+     *  - size:   number of items per page
      * @return page of clients mapped to {@link TmsClientDto}
      */
-    Page<TmsClientDto> listClients(String search, int page, int size);
+    Page<TmsClientDto> listClients(TmsClientDto filters);
 
     /**
      * Creates a new project.
@@ -66,14 +66,15 @@ public interface TmsProjectService {
 
     /**
      * Lists projects with optional filters.
-     *
-     * @param active   true for active projects, false for archived
-     * @param clientId optional filter by owner (client ID)
-     * @param search   optional case-insensitive substring search on project name
-     * @param page     0-based page index
-     * @param size     number of items per page
-     * @return page of projects mapped to {@link TmsProjectDto}
+     @param filters filter DTO containing:
+      *                <ul>
+      *                  <li>{@link TmsProjectDto active} – true for active projects, false for archived</li>
+      *                  <li>{@link TmsProjectDto search} – optional case-insensitive substring search on project name</li>
+      *                  <li>{@link TmsProjectDto page page} – 0-based page index</li>
+      *                  <li>{@link TmsProjectDto size size} – number of items per page</li>
+      *                </ul>
+      * @return page of projects mapped to {@link TmsProjectDto}
      */
-    Page<TmsProjectDto> listProjects(boolean active, Integer clientId, String search, int page, int size);
+    Page<TmsProjectDto> listProjects(TmsProjectDto filters);
 
 }

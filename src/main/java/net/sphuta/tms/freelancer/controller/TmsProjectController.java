@@ -3,7 +3,7 @@ package net.sphuta.tms.freelancer.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
-import net.sphuta.tms.freelancer.constants.ApiMessageConstants;
+import net.sphuta.tms.freelancer.constants.TmsMessages;
 import net.sphuta.tms.freelancer.dto.TmsClientDto;
 import net.sphuta.tms.freelancer.dto.TmsProjectDto;
 import net.sphuta.tms.freelancer.response.TmsPageResponse;
@@ -53,10 +53,10 @@ public class TmsProjectController {
      * Returns a paginated list of clients for the Owner dropdown.
      * Can be filtered by active status and search term.
      *
-     * @param active filter flag (true to fetch only active clients)
-     * @param search optional case-insensitive name search
-     * @param page   0-based page index
-     * @param size   page size
+     *  - active: filter flag (true to fetch only active clients)
+     *  - search optional case-insensitive name search
+     *  - page   0-based page index
+     *  - size   page size
      * @return standardized response with client DTOs + pagination metadata
      */
     @Operation(
@@ -65,25 +65,19 @@ public class TmsProjectController {
     )
     @GetMapping("/clients")
     public TmsApiResponse<TmsPageResponse<TmsClientDto>> listClients(
-            @RequestParam(defaultValue = "true") boolean active,
-            @RequestParam(defaultValue = "") String search,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "100") int size) {
+            @RequestBody TmsClientDto filters) {
 
-        log.debug("GET /clients called: active={}, search='{}', page={}, size={}", active, search, page, size);
+        log.info("Fetching clients for project assignment with filters: {}", filters);
 
         // Delegate to service for paginated client retrieval
-        var p = service.listClients(search, page, size);
+        var p = service.listClients(filters);
 
         // Build page metadata (page number, size, total elements, total pages)
         var meta = new TmsPageResponse.PageMeta(p.getNumber(), p.getSize(), p.getTotalElements(), p.getTotalPages());
 
-        // Wrap result in standardized API response
-        var resp = TmsApiResponse.success(HttpStatus.OK, ApiMessageConstants.CLIENTS_FETCHED, new TmsPageResponse<>(p.getContent(), meta));
-
         log.info("Clients list returned: elements={}, totalPages={}, page={}", p.getTotalElements(), p.getTotalPages(), p.getNumber());
+        return TmsApiResponse.success(TmsMessages.CLIENTS_FETCHED, new TmsPageResponse<>(p.getContent(), meta));
 
-        return resp;
     }
 
     /* ============================================================
@@ -93,11 +87,13 @@ public class TmsProjectController {
     /**
      * Lists projects with filters such as active/archived, by client, and search.
      *
-     * @param active   filter flag (true=active, false=archived)
-     * @param clientId optional filter by client ID (owner)
-     * @param search   optional case-insensitive search on project fields
-     * @param page     0-based page index
-     * @param size     page size
+     *@param filters filter DTO containing:
+      *<ul>
+      *    <li>{@link TmsProjectDto active} – true for active projects, false for archived</li>
+      *    <li>{@link TmsProjectDto search} – optional case-insensitive substring search on project name</li>
+      *    <li>{@link TmsProjectDto page page} – 0-based page index</li>
+      *    <li>{@link TmsProjectDto size size} – number of items per page</li>
+      *</ul>
      * @return standardized response with project DTOs + pagination metadata
      */
     @Operation(
@@ -106,26 +102,18 @@ public class TmsProjectController {
     )
     @GetMapping("/projects")
     public TmsApiResponse<TmsPageResponse<TmsProjectDto>> listProjects(
-            @RequestParam(defaultValue = "true") boolean active,
-            @RequestParam(required = false) Integer clientId,
-            @RequestParam(defaultValue = "") String search,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "25") int size) {
+           @ModelAttribute TmsProjectDto filters) {
 
-        log.debug("GET /projects called: active={}, clientId={}, search='{}', page={}, size={}", active, clientId, search, page, size);
+        log.debug("GET /projects called with filters: {}", filters);
 
         // Delegate to service for project retrieval
-        var p = service.listProjects(active, clientId, search, page, size);
+        var p = service.listProjects(filters);
 
         // Page metadata construction
         var meta = new TmsPageResponse.PageMeta(p.getNumber(), p.getSize(), p.getTotalElements(), p.getTotalPages());
 
-        // Wrap result in API response
-        var resp = TmsApiResponse.success(HttpStatus.OK, ApiMessageConstants.PROJECTS_FETCHED_SUCCESS, new TmsPageResponse<>(p.getContent(), meta));
-
         log.info("Projects list returned: elements={}, totalPages={}, page={}", p.getTotalElements(), p.getTotalPages(), p.getNumber());
-
-        return resp;
+        return TmsApiResponse.success(TmsMessages.PROJECTS_FETCHED_SUCCESS, new TmsPageResponse<>(p.getContent(), meta));
     }
 
     /**
@@ -139,7 +127,7 @@ public class TmsProjectController {
             description = "Creates a new project under a client and returns the created resource with location header."
     )
     @PostMapping("/projects")
-    public ResponseEntity<TmsApiResponse<TmsProjectDto>> create(
+    public TmsApiResponse<TmsProjectDto> create(
             @Validated(TmsProjectDto.Create.class) @RequestBody TmsProjectDto in) {
 
         log.debug("POST /projects create requested for name='{}', code='{}'", in.projectName(), in.code());
@@ -150,12 +138,9 @@ public class TmsProjectController {
         // Build resource URI for Location header
         var location = URI.create("/api/v1/projects/" + created.id());
 
-        // Wrap result in standardized API response
-        var resp = TmsApiResponse.success(HttpStatus.CREATED, ApiMessageConstants.PROJECT_CREATED, created);
-
         log.info("Project created: id={}, location={}", created.id(), location);
 
-        return ResponseEntity.created(location).body(resp);
+        return TmsApiResponse.created(TmsMessages.PROJECT_CREATED, created);
     }
 
     /**
@@ -181,7 +166,7 @@ public class TmsProjectController {
 
         log.info("Project fully updated: id={}", id);
 
-        return TmsApiResponse.success(HttpStatus.OK, ApiMessageConstants.PROJECT_UPDATED, updated);
+        return TmsApiResponse.success(TmsMessages.PROJECT_UPDATED, updated);
     }
 
     /**
@@ -204,7 +189,7 @@ public class TmsProjectController {
 
         log.info("Project archived: id={}", id);
 
-        return TmsApiResponse.success(HttpStatus.OK, ApiMessageConstants.PROJECT_ARCHIVED, archived);
+        return TmsApiResponse.success(TmsMessages.PROJECT_ARCHIVED, archived);
     }
 
     /**
@@ -227,7 +212,7 @@ public class TmsProjectController {
 
         log.info("Project unarchived: id={}", id);
 
-        return TmsApiResponse.success(HttpStatus.OK, ApiMessageConstants.PROJECT_UNARCHIVED, unarchived);
+        return TmsApiResponse.success(TmsMessages.PROJECT_UNARCHIVED, unarchived);
     }
 
     /**
@@ -250,7 +235,7 @@ public class TmsProjectController {
 
         log.info("Project deleted: id={}", id);
 
-        return TmsApiResponse.success(HttpStatus.OK, ApiMessageConstants.PROJECT_DELETED, null);
+        return TmsApiResponse.success(TmsMessages.PROJECT_DELETED, null);
     }
 
 }

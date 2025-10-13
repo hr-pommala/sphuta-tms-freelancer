@@ -60,8 +60,8 @@ public class TmsInvoiceMapper {
                 .currencyCode(e.getCurrencyCode())
                 .status(e.getStatus().name()) // ✅ expose enum as string
                 .notes(e.getNotes())
-                .createdAt(e.getCreatedAt())
-                .updatedAt(e.getUpdatedAt())
+                .createdDt(e.getCreatedAt())
+                .updatedDt(e.getUpdatedAt())
                 .build();
     }
 }

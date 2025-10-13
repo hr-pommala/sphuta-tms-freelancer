@@ -1,6 +1,7 @@
 package net.sphuta.tms.freelancer.service.impl;
 
 import lombok.extern.slf4j.Slf4j;
+import net.sphuta.tms.freelancer.constants.TmsMessages;
 import net.sphuta.tms.freelancer.dto.TmsUserDto;
 import net.sphuta.tms.freelancer.entity.User;
 import net.sphuta.tms.freelancer.entity.UserEntity;
@@ -40,7 +41,7 @@ public class TmsUserServiceImpl implements TmsUserService {
 
         tmsUserRepository.findByEmail(request.email()).ifPresent(u -> {
             log.warn("Attempted to create user with existing email {}", request.email());
-            throw new ConflictException("Email already exists");
+            throw new ConflictException(TmsMessages.EMAIL_ALREADY_EXISTS);
         });
 
         var saved = tmsUserRepository.save(TmsUserMapper.toEntity(request));
@@ -56,7 +57,7 @@ public class TmsUserServiceImpl implements TmsUserService {
                 .map(TmsUserMapper::toResponse)
                 .orElseThrow(() -> {
                     log.error("User not found with ID {}", id);
-                    return new NotFoundException("User not existed with this id: " + id);
+                    return new NotFoundException(String.format(TmsMessages.USER_NOT_FOUND_BY_ID, + id));
                 });
     }
 
@@ -78,7 +79,7 @@ public class TmsUserServiceImpl implements TmsUserService {
         var user = tmsUserRepository.findById(id)
                 .orElseThrow(() -> {
                     log.error("User not found with ID {}", id);
-                    return new NotFoundException("User not existed with this id: " + id);
+                    return new NotFoundException(String.format(TmsMessages.USER_NOT_FOUND_BY_ID + id));
                 });
 
         // Update full set of fields using mapper
@@ -98,7 +99,7 @@ public class TmsUserServiceImpl implements TmsUserService {
         var user = tmsUserRepository.findById(id)
                 .orElseThrow(() -> {
                     log.error("User not found with ID {}", id);
-                    return new NotFoundException("User not existed with this id: " + id);
+                    return new NotFoundException(String.format(TmsMessages.USER_NOT_FOUND_BY_ID + id));
                 });
 
         tmsUserRepository.delete(user);

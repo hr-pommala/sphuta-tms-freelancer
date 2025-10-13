@@ -59,8 +59,8 @@ public class TmsClientServiceImpl implements TmsClientService {
     private TmsInvoiceRepository invoiceRepo;
 
     /** Repository for estimate references */
-    @Autowired
-    private TmsEstimateRepository estimateRepo;
+//    @Autowired
+//    private TmsEstimateRepository estimateRepo;
 
     /** Repository for user validation */
     @Autowired
@@ -73,22 +73,30 @@ public class TmsClientServiceImpl implements TmsClientService {
     /**
      * Retrieve paginated list of clients filtered by active/archived flag.
      *
-     * @param active true = only active, false = only archived
-     * @param search free-text search filter
-     * @param page   page number (0-based)
-     * @param size   number of records per page
+     * @param - active: true = only active, false = only archived
+     * @param - search: free-text search filter
+     * @param - page:   page number (0-based)
+     * @param - size:   number of records per page
      * @return paginated {@link Page} of {@link TmsClientDto}
      */
     @Override
-    public Page<TmsClientDto> list(boolean active, String search, int page, int size) {
-        int p = Math.max(page, 0);
-        int s = Math.min(Math.max(size, 1), 100);
+    public Page<TmsClientDto> listClients(TmsClientDto filters) {
+        int p = Math.max(filters.page(), 0);
+        int s = Math.min(Math.max(filters.size(), 1), 100);
 
-        log.debug("Listing clients | active={}, search='{}', page={}, size={}", active, search, p, s);
+        log.debug("Listing clients | active={}, search='{}', page={}, size={}",
+                filters.active(), filters.search(), p, s);
 
         Pageable pageable = PageRequest.of(p, s);
-        return repo.search(active, search, pageable).map(TmsClientMapper::toResponse);
+
+        if ("all".equalsIgnoreCase(filters.active())) {
+            return repo.searchAll(filters.search(), pageable).map(TmsClientMapper::toResponse);
+        } else {
+            boolean isActive = Boolean.parseBoolean(filters.active());
+            return repo.search(isActive, filters.search(), pageable).map(TmsClientMapper::toResponse);
+        }
     }
+
 
     /**
      * Retrieve paginated list of all clients (active + archived).
@@ -303,9 +311,17 @@ public class TmsClientServiceImpl implements TmsClientService {
     public byte[] exportCsv(String activeFilter, String search) {
         log.debug("Generating CSV export | filter={}, search='{}'", activeFilter, search);
 
+        // Create a DTO for filter
+        TmsClientDto filters = TmsClientDto.builder()
+                .active(activeFilter)
+                .search(search)
+                .page(0)
+                .size(Integer.MAX_VALUE)
+                .build();
+
         Page<TmsClientDto> page = "all".equalsIgnoreCase(activeFilter)
                 ? listAll(search, 0, Integer.MAX_VALUE)
-                : list(Boolean.parseBoolean(activeFilter), search, 0, Integer.MAX_VALUE);
+                : listClients(filters);
 
         String header = "id,companyName,firstName,lastName,email,isActive\n";
 

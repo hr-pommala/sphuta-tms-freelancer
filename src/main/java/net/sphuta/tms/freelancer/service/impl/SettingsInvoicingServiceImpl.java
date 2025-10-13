@@ -1,6 +1,7 @@
 package net.sphuta.tms.freelancer.service.impl;
 
 import lombok.extern.slf4j.Slf4j;
+import net.sphuta.tms.freelancer.constants.TmsMessages;
 import net.sphuta.tms.freelancer.dto.SettingsInvoicingDTO;
 import net.sphuta.tms.freelancer.entity.SettingsInvoicing;
 import net.sphuta.tms.freelancer.exception.NotFoundException;
@@ -68,7 +69,7 @@ public class SettingsInvoicingServiceImpl implements SettingsInvoicingService {
 
         if (!repository.existsById(userId)) {
             log.warn("Settings not found for userId={}", userId);
-            throw new NotFoundException("Settings not found for userId: " + userId);
+            throw new NotFoundException(TmsMessages.SETTINGS_NOT_FOUND + userId);
         }
 
         return repository.findById(userId).map(mapper::toDTO);
@@ -102,7 +103,7 @@ public class SettingsInvoicingServiceImpl implements SettingsInvoicingService {
     public SettingsInvoicingDTO updateSettings(int userId, SettingsInvoicingDTO dto) {
         log.info("Updating invoicing settings for userId={}", userId);
         SettingsInvoicing existing = repository.findById(userId)
-                .orElseThrow(() -> new NotFoundException("Settings not found for userId: " + userId));
+                .orElseThrow(() -> new NotFoundException(TmsMessages.SETTINGS_NOT_FOUND + userId));
 
         // Replace all fields
         existing.setCurrency(dto.currency());
@@ -131,7 +132,7 @@ public class SettingsInvoicingServiceImpl implements SettingsInvoicingService {
         log.info("Deleting invoicing settings for userId={}", userId);
         if (!repository.existsById(userId)) {
             log.warn("Settings not found for userId={}", userId);
-            throw new NotFoundException("Settings not found for userId: " + userId);
+            throw new NotFoundException(TmsMessages.SETTINGS_NOT_FOUND + userId);
         }
         repository.deleteById(userId);
         log.info("Invoicing settings deleted for userId={}", userId);

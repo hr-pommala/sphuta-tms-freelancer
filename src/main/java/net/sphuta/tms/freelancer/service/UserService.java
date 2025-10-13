@@ -12,7 +12,10 @@ public interface UserService {
 
     void startForgotFlow(String email);
 
-    // NEW: reset by email (no token)
-    void resetPasswordByEmail(String email, String newPassword);
+    // ✅ UPDATED: now includes confirmPassword so logic can move from controller to service
+    void resetPasswordByEmail(String email, String newPassword, String confirmPassword);
+
+    // ✅ NEW: logout logic moved from controller to service
+    AuthResponses.ApiMessage logout(String authHeader);
 
 }

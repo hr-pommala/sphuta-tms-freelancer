@@ -21,14 +21,14 @@ public interface TmsClientService {
 
     /**
      * Retrieve a paginated list of clients filtered by active status.
-     *
-     * @param active true = only active, false = only archived
-     * @param search free-text search keyword
-     * @param page   page number (0-based)
-     * @param size   number of records per page
+     * @params
+     *  -active: true = only active, false = only archived
+     *  -search: free-text search keyword
+     *  -page:   page number (0-based)
+     *  -size:   number of records per page
      * @return a paginated {@link Page} of {@link TmsClientDto}
      */
-    Page<TmsClientDto> list(boolean active, String search, int page, int size);
+    Page<TmsClientDto> listClients(TmsClientDto filters);
 
     /**
      * Retrieve a paginated list of all clients (active and archived).
