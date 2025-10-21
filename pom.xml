@@ -10,6 +10,7 @@
 	<properties>
 		<java.version>17</java.version>
 		<spring.boot.version>3.3.2</spring.boot.version>
+		<jasper.version>6.21.0</jasper.version>
 	</properties>
 
 	<dependencyManagement>
@@ -30,6 +31,21 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
+
+		<!-- JasperReports core -->
+		<dependency>
+			<groupId>net.sf.jasperreports</groupId>
+			<artifactId>jasperreports</artifactId>
+			<version>${jasper.version}</version>
+		</dependency>
+
+		<!-- JasperReports fonts bundle (helps with PDF text rendering/embedding) -->
+		<dependency>
+			<groupId>net.sf.jasperreports</groupId>
+			<artifactId>jasperreports-fonts</artifactId>
+			<version>${jasper.version}</version>
+		</dependency>
+
 
 		<!-- Security -->
 		<dependency>
