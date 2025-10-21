@@ -88,18 +88,13 @@ public class ReportController {
      * </pre>
      *
      * @param payload JSON payload containing invoice details
-     * @return ResponseEntity<byte[]> PDF response (downloadable)
+     * @return ResponseEntity<?> PDF response (downloadable)
      * ==============================================================
      */
     @PostMapping(value = "/invoice", produces = MediaType.APPLICATION_PDF_VALUE)
-    public ResponseEntity<byte[]> invoiceWithPayload(@RequestBody InvoicePayload payload) {
-        // 🔹 Log request initiation
+    public ResponseEntity<?> invoiceWithPayload(@RequestBody InvoicePayload payload) {
         log.info("Request received: Generate custom invoice (POST /reports/invoice)");
-
-        // 🔹 Log request payload for debugging (contains company, client, invoice info)
         log.debug("Payload: {}", payload);
-
-        // 🔹 Delegate entire processing to ReportService
         return reportService.buildInvoiceResponse(payload);
     }
 }

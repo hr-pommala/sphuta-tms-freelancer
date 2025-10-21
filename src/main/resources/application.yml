@@ -4,36 +4,60 @@ spring:
     username: root
     password: root
   jpa:
-    show-sql: true            # Log SQL statements
+    show-sql: true
     hibernate:
-      ddl-auto: update           # Automatically creates/updates schema (dev use only, avoid in prod)
+      ddl-auto: update
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQL8Dialect
-        format_sql: true         # Pretty-print SQL in logs
-    open-in-view: false          # Disable session-in-view for cleaner transaction boundaries
+        format_sql: true
+    open-in-view: false
   mvc:
     format:
-      date: iso                  # Enforces ISO date format for @DateTimeFormat
+      date: iso
+
+  # ===============================
+  # ✉️  EMAIL (SMTP) CONFIGURATION
+  # ===============================
+  mail:
+    host: smtp.gmail.com                # Your SMTP server host
+    port: 587                           # TLS port
+    username: mahebunnisashaik252@gmail.com   # Replace with actual email address
+    password: eovrgpinxtaqlxax
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+        # Optional debug logging
+        debug: false
+    default-encoding: UTF-8
 
 server:
-  port: 8080                     # Application runs on http://localhost:8080
+  port: 8080
 
 logging:
   level:
-    root: INFO                   # Default log level
-    org.hibernate.SQL: INFO      # Log SQL queries (DEBUG would show bind parameters too)
+    root: INFO
+    org.hibernate.SQL: INFO
 
-# Swagger / OpenAPI config
+# ===============================
+# 📘 Swagger / OpenAPI config
+# ===============================
 springdoc:
   api-docs:
     enabled: true
-    path: /v3/api-docs           # JSON/YAML spec served here
+    path: /v3/api-docs
   swagger-ui:
     enabled: true
-    path: /swagger-ui.html       # Swagger UI available at http://localhost:8080/swagger-ui.html
+    path: /swagger-ui.html
 
-
+# ===============================
+# 🧠 AUTH DB (In-memory H2 for auth module)
+# ===============================
+auth:
   datasource:
     url: jdbc:h2:mem:authdb;DB_CLOSE_DELAY=-1
     driverClassName: org.h2.Driver
@@ -44,8 +68,9 @@ springdoc:
       ddl-auto: update
     show-sql: true
 
+# ===============================
+# 🔐 JWT Config
+# ===============================
 jwt:
   secret: verysecret_jwt_key_for_dev_change_me
   expirationMs: 3600000
-
-
