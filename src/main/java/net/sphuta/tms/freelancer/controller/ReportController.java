@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 /**
  * ==============================================================
  *  ReportController
@@ -96,5 +98,16 @@ public class ReportController {
         log.info("Request received: Generate custom invoice (POST /reports/invoice)");
         log.debug("Payload: {}", payload);
         return reportService.buildInvoiceResponse(payload);
+    }
+
+    /**
+     * Manual trigger endpoint for testing scheduler flows.
+     * Usage: POST /reports/invoice/trigger/TEST
+     */
+    @PostMapping("/invoice/trigger/{trigger}")
+    public ResponseEntity<?> triggerScheduler(@PathVariable String trigger) {
+        log.info("Manual trigger invoked: {}", trigger);
+        reportService.validateAndProcessInvoices(trigger);
+        return ResponseEntity.ok(Map.of("status", "triggered", "trigger", trigger));
     }
 }
