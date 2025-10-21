@@ -47,7 +47,8 @@ public class User {
 
     // EAGER fetch to load roles immediately with user
     @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
+    @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"),
+                        foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
     @Column(name = "role")
     private Set<String> roles;
 
