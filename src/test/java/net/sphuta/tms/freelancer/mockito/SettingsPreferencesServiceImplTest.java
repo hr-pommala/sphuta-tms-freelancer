@@ -49,7 +49,7 @@ class SettingsPreferencesServiceImplTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
 
-        // Request contains first 4 fields, updatedAt is null
+        // Request contains first 4 fields, updateDt is null
         request = new PreferencesDto(
                 123,
                 "YYYY-MM-DD",
@@ -63,16 +63,16 @@ class SettingsPreferencesServiceImplTest {
                 .dateFormat("YYYY-MM-DD")
                 .weekStartsOn(WeekStart.MON)
                 .rounding(Rounding.NONE)
-                .updatedAt(LocalDateTime.now())
+                .updatedDt(LocalDateTime.now())
                 .build();
 
-        // Response contains updatedAt
+        // Response contains updateDt (note DTO field name)
         response = new PreferencesDto(
                 123,
                 "YYYY-MM-DD",
                 WeekStart.MON,
                 Rounding.NONE,
-                entity.getUpdatedAt()
+                entity.getUpdatedDt()
         );
 
         log.info("Test setup completed for userId: {}", request.userId());
