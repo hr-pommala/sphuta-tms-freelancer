@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 /**
  * =============================================================
  * ReportController
@@ -57,5 +59,16 @@ public class ReportController {
         // Delegate the actual PDF generation to ReportService
         // The service will handle business logic, PDF creation, and ResponseEntity preparation.
         return reportService.generateInvoicePdf(payload);
+    }
+
+    /**
+     * Manual trigger endpoint for testing scheduler flows.
+     * Usage: POST /reports/invoice/trigger/TEST
+     */
+    @PostMapping("/invoice/trigger/{trigger}")
+    public ResponseEntity<?> triggerScheduler(@PathVariable String trigger) {
+        log.info("Manual trigger invoked: {}", trigger);
+        reportService.validateAndProcessInvoices(trigger);
+        return ResponseEntity.ok(Map.of("status", "triggered", "trigger", trigger));
     }
 }
