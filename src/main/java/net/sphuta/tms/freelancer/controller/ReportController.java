@@ -8,23 +8,18 @@ import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * ==============================================================
- *  ReportController
- * ==============================================================
- * This controller exposes REST endpoints for generating invoice PDF reports.
- * It acts as a thin routing layer that delegates all business logic,
- * report generation, and response creation to the {@link ReportService}.
+ * =============================================================
+ * ReportController
+ * =============================================================
+ * This controller handles all report-related API endpoints,
+ * primarily focusing on generating PDF invoices for freelancers.
  *
- * Responsibilities:
- *  - Accept client requests for invoice generation.
- *  - Log request activity for observability.
- *  - Delegate processing to service layer.
- *  - Return PDF responses with appropriate HTTP headers.
+ * Features:
+ * - Accepts invoice details (via InvoicePayload DTO)
+ * - Delegates PDF generation logic to ReportService
+ * - Returns the generated invoice as a PDF response
  *
- * Endpoints:
- *  - GET  /reports/invoice → Generates a sample invoice (no payload)
- *  - POST /reports/invoice → Generates a custom invoice (with JSON payload)
- * ==============================================================
+ * Endpoint base path: /reports
  */
 @Slf4j
 @RestController
@@ -32,69 +27,35 @@ import org.springframework.web.bind.annotation.*;
 public class ReportController {
 
     /**
-     * Injected ReportService dependency.
-     * Handles all JasperReports-related logic.
+     * ReportService is responsible for the core business logic
+     * related to generating reports, such as invoices.
+     * It is automatically injected by Spring using @Autowired.
      */
     @Autowired
     private ReportService reportService;
 
     /**
-     * ==============================================================
-     * 🧾 GET /reports/invoice
-     * ==============================================================
-     * Endpoint to generate a **sample invoice PDF**.
+     * =============================================================
+     * Method: invoiceWithPayload
+     * =============================================================
+     * Purpose:
+     *  - Accepts custom invoice details in JSON format.
+     *  - Generates a PDF invoice dynamically based on the given data.
      *
-     * This method:
-     *  - Logs the incoming request.
-     *  - Delegates full invoice generation and PDF preparation
-     *    to {@link ReportService#buildSampleInvoiceResponse()}.
-     *  - Returns a PDF as a downloadable HTTP response.
+     * HTTP Method: POST
+     * Endpoint: /reports/invoice
+     * Consumes: application/json (InvoicePayload)
+     * Produces: application/pdf (Generated Invoice)
      *
-     * @return ResponseEntity<byte[]> PDF file stream with HTTP headers
-     * ==============================================================
-     */
-    @GetMapping(value = "/invoice", produces = MediaType.APPLICATION_PDF_VALUE)
-    public ResponseEntity<byte[]> sampleInvoice() {
-        // 🔹 Log request intent
-        log.info(" Request received: Generate sample invoice (GET /reports/invoice)");
-
-        // 🔹 Delegate business logic and response preparation to service layer
-        return reportService.buildSampleInvoiceResponse();
-    }
-
-    /**
-     * ==============================================================
-     * 🧾 POST /reports/invoice
-     * ==============================================================
-     * Endpoint to generate a **custom invoice PDF** using client-provided data.
-     *
-     * This method:
-     *  - Accepts JSON body as {@link InvoicePayload}.
-     *  - Logs the request and its payload for traceability.
-     *  - Delegates all PDF generation and header construction
-     *    to {@link ReportService#buildInvoiceResponse(InvoicePayload)}.
-     *  - Returns a generated invoice as an application/pdf download.
-     *
-     * Example Request:
-     * <pre>
-     * POST /reports/invoice
-     * Content-Type: application/json
-     * {
-     *   "fromCompany": "Acme Solutions",
-     *   "clientName": "John Doe",
-     *   "invoiceNo": "INV-1001",
-     *   ...
-     * }
-     * </pre>
-     *
-     * @param payload JSON payload containing invoice details
-     * @return ResponseEntity<?> PDF response (downloadable)
-     * ==============================================================
+     * @param payload - InvoicePayload containing all invoice details
+     * @return ResponseEntity containing the generated PDF as a byte stream
      */
     @PostMapping(value = "/invoice", produces = MediaType.APPLICATION_PDF_VALUE)
     public ResponseEntity<?> invoiceWithPayload(@RequestBody InvoicePayload payload) {
         log.info("Request received: Generate custom invoice (POST /reports/invoice)");
         log.debug("Payload: {}", payload);
-        return reportService.buildInvoiceResponse(payload);
+        // Delegate the actual PDF generation to ReportService
+        // The service will handle business logic, PDF creation, and ResponseEntity preparation.
+        return reportService.generateInvoicePdf(payload);
     }
 }

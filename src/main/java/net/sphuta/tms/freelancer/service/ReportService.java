@@ -10,277 +10,213 @@ import org.springframework.stereotype.Service;
 
 import java.io.InputStream;
 import java.math.BigDecimal;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.time.*;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 
 /**
- * ReportService - generates invoice PDFs using JasperReports and optionally
- * sends them via EmailService when requested in the InvoicePayload.
+ * ======================================================================
+ * ReportService
+ * ======================================================================
+ * This service handles dynamic PDF report generation using JasperReports.
+ *
+ * ✅ Primary Use:
+ * - Generates invoices based on input data from InvoicePayload DTO.
+ * - Optionally sends the generated PDF to the client via email.
+ *
+ * ✅ Features:
+ * - Loads and compiles JasperReports JRXML templates.
+ * - Dynamically fills report parameters from DTO fields.
+ * - Calculates financial totals (subtotal, tax, total).
+ * - Exports the filled report to a PDF byte array.
+ * - Sends email (if enabled and EmailService is configured).
+ *
+ * ✅ Integration Points:
+ * - Used by ReportController (/reports/invoice).
+ * - Optionally integrates with EmailService.
  */
 @Slf4j
 @Service
 public class ReportService {
 
-    @Autowired(required = false)
-    private EmailService emailService; // optional - your EmailService handles dev fallback
-
-    // -----------------------
-    // Endpoint helper methods
-    // -----------------------
-
     /**
-     * Build response for GET /reports/invoice (sample invoice download).
-     */
-    public ResponseEntity<byte[]> buildSampleInvoiceResponse() {
-        try {
-            byte[] pdf = generateSampleInvoice();
-            log.debug("Sample invoice generated successfully. Size: {} bytes", (pdf != null ? pdf.length : 0));
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_PDF);
-            headers.setContentDisposition(ContentDisposition.attachment().filename("invoice.pdf").build());
-
-            log.info("Sending generated sample invoice as response...");
-            return new ResponseEntity<>(pdf, headers, HttpStatus.OK);
-
-        } catch (JRException e) {
-            log.error("JasperReports exception while generating sample invoice: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        } catch (Exception e) {
-            log.error("Unexpected error generating sample invoice: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
-
-    /**
-     * Build response for POST /reports/invoice.
+     * EmailService dependency.
      *
-     * If payload.sendEmail == true, will attempt to email the PDF to payload.emailTo.
-     * Returns PDF (application/pdf) on success, or JSON error (400/500) on failure.
+     * Used to send the generated PDF invoice via email.
+     * The 'required=false' ensures that the application runs even
+     * if EmailService is not configured (e.g., in local dev mode).
      */
-    public ResponseEntity<?> buildInvoiceResponse(InvoicePayload payload) {
-        boolean sendEmail = Boolean.TRUE.equals(payload.sendEmail());
-        String recipientEmail = payload.emailTo();
-        String subject = payload.emailSubject();
-        String body = payload.emailBody();
+    @Autowired(required = false)
+    private EmailService emailService;
 
+    /**
+     * ======================================================================
+     * Method: generateInvoicePdf
+     * ======================================================================
+     * Generates a dynamic invoice PDF using JasperReports.
+     *
+     * Workflow:
+     * 1️⃣ Load and compile Jasper template (.jrxml)
+     * 2️⃣ Populate report parameters from InvoicePayload
+     * 3️⃣ Calculate subtotal, tax, and total
+     * 4️⃣ Export report to PDF byte array
+     * 5️⃣ Send via email (if 'sendEmail' flag is true)
+     * 6️⃣ Return PDF as HTTP ResponseEntity
+     *
+     * @param payload  DTO containing all invoice data
+     * @return ResponseEntity containing PDF bytes or error message
+     */
+    public ResponseEntity<?> generateInvoicePdf(InvoicePayload payload) {
         try {
-            // Generate PDF bytes (core logic reused)
-            byte[] pdf = generateInvoice(
-                    payload.fromCompany(),
-                    payload.fromAddress(),
-                    payload.fromPhone(),
-                    payload.fromEmail(),
-                    payload.clientName(),
-                    payload.clientAddress(),
-                    payload.clientPhone(),
-                    payload.invoiceNo(),
-                    payload.invoiceDate(),
-                    payload.dueDate(),
-                    payload.bankName(),
-                    payload.accountNo(),
-                    payload.items()
-            );
+            log.info("Generating dynamic invoice PDF for client: {}", payload.clientName());
 
-            log.debug("Custom invoice generated successfully. Size: {} bytes", (pdf != null ? pdf.length : 0));
-
-            // If emailing requested, validate and send
-            if (sendEmail) {
-                if (recipientEmail == null || recipientEmail.isBlank()) {
-                    log.warn("sendEmail requested but emailTo is missing in payload");
-                    return ResponseEntity.badRequest().body(Map.of("error", "emailTo is required when sendEmail=true"));
-                }
-
-                String mailSubject = (subject == null || subject.isBlank()) ? ("Invoice " + (payload.invoiceNo() != null ? payload.invoiceNo() : "")) : subject;
-                String mailBody = (body == null || body.isBlank()) ? ("Please find attached your invoice " + (payload.invoiceNo() != null ? payload.invoiceNo() : "")) : body;
-                String filename = (payload.invoiceNo() != null && !payload.invoiceNo().isBlank()) ? payload.invoiceNo() + ".pdf" : "invoice.pdf";
-
-                try {
-                    if (emailService != null) {
-                        emailService.sendWithAttachment(recipientEmail, mailSubject, mailBody, pdf, filename);
-                    } else {
-                        // emailService not configured — dev fallback: log & simulate
-                        log.info("[DEV MODE] emailService not configured - simulated email to {}", recipientEmail);
-                        System.out.println("=== Simulated send (dev) ===\nTo: " + recipientEmail + "\nSubject: " + mailSubject + "\nBody: " + mailBody + "\nAttachment: " + filename + " (" + (pdf != null ? pdf.length : 0) + " bytes)");
-                    }
-                } catch (Exception e) {
-                    log.error("Failed to send invoice to {}: {}", recipientEmail, e.getMessage(), e);
-                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                            .body(Map.of("error", "email sending failed", "detail", e.getMessage()));
-                }
+            // Step 1: Load the Jasper template file from resources folder
+            InputStream jrxml = getClass().getResourceAsStream("/reports/invoice.jrxml");
+            if (jrxml == null) {
+                // Template not found → return error response
+                log.error("JRXML template not found at /reports/invoice.jrxml");
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(Map.of("error", "invoice.jrxml template not found"));
             }
 
-            // Always return PDF as before
+            // Step 2: Compile JRXML template into a JasperReport object
+            JasperReport jasperReport = JasperCompileManager.compileReport(jrxml);
+
+            // Step 3: Calculate totals (subtotal, tax, total)
+            // ------------------------------------------------------------------
+            List<Item> items = payload.items() != null ? payload.items() : List.of();
+            BigDecimal subtotal = items.stream()
+                    .map(i -> i.amount() != null ? i.amount() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            BigDecimal taxRate = new BigDecimal("5.00"); // Static 5% tax
+            BigDecimal totalTax = subtotal.multiply(taxRate).divide(new BigDecimal("100"));
+            BigDecimal total = subtotal.add(totalTax);
+            // ------------------------------------------------------------------
+
+            // Step 4: Prepare Jasper parameters (mapped to JRXML fields)
+            Map<String, Object> params = new HashMap<>();
+
+            // Company (sender) details
+            params.put("fromCompany", payload.fromCompany());
+            params.put("fromAddress", payload.fromAddress());
+            params.put("fromPhone", payload.fromPhone());
+            params.put("fromEmail", payload.fromEmail());
+
+            // Client (receiver) details
+            params.put("clientCompany", payload.clientName());
+            params.put("contactName", payload.clientName());
+            params.put("clientAddress", payload.clientAddress());
+            params.put("clientPhone", payload.clientPhone());
+
+            // Invoice details
+            params.put("invoiceNo", payload.invoiceNo());
+            params.put("invoiceDate", payload.invoiceDate());
+            params.put("dueDate", payload.dueDate());
+
+            // Bank/payment details
+            params.put("bankName", payload.bankName());
+            params.put("accountNo", payload.accountNo());
+
+            // Calculated totals
+            params.put("subtotal", subtotal);
+            params.put("taxRate", taxRate);
+            params.put("totalTax", totalTax);
+            params.put("total", total);
+
+            // Step 5: Fill Jasper report and export to PDF
+            // JREmptyDataSource → report uses only parameters (no DB connection)
+            JasperPrint jasperPrint = JasperFillManager.fillReport(jasperReport, params, new JREmptyDataSource());
+            byte[] pdf = JasperExportManager.exportReportToPdf(jasperPrint);
+            log.info("Invoice PDF generated successfully, size={} bytes", pdf.length);
+
+            // Step 6: If email sending is enabled, trigger email send
+            if (Boolean.TRUE.equals(payload.sendEmail())) {
+                sendInvoiceByEmail(payload, pdf);
+            }
+
+            // Step 7: Prepare response headers for PDF download
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_PDF);
-            headers.setContentDisposition(ContentDisposition.attachment().filename("invoice_custom.pdf").build());
+            headers.setContentDisposition(
+                    ContentDisposition.attachment()
+                            .filename((payload.invoiceNo() != null ? payload.invoiceNo() : "invoice") + ".pdf")
+                            .build()
+            );
 
+            // Return the generated PDF as HTTP response
             return new ResponseEntity<>(pdf, headers, HttpStatus.OK);
 
         } catch (JRException e) {
-            log.error("JasperReports exception while generating custom invoice: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "pdf generation failed", "detail", e.getMessage()));
+            // JasperReports-specific exception
+            log.error("JasperReports error: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to generate invoice PDF", "detail", e.getMessage()));
+
         } catch (Exception e) {
-            log.error("Unexpected error generating custom invoice: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "unexpected error", "detail", e.getMessage()));
+            // Any other unexpected errors
+            log.error("Unexpected error while generating invoice: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Unexpected server error", "detail", e.getMessage()));
         }
     }
 
-    // -----------------------
-    // Core generation methods (unchanged functionality)
-    // -----------------------
-
-    public byte[] generateInvoicePdf(Integer invoiceId) throws JRException {
-        log.info("Request to generate invoice PDF for invoiceId={}", invoiceId);
-
-        InputStream jrxml = getClass().getResourceAsStream("/reports/invoice.jrxml");
-        if (jrxml == null) {
-            log.error("JRXML template not found at /reports/invoice.jrxml");
-            throw new RuntimeException("invoice.jrxml not found");
+    /**
+     * ======================================================================
+     * Method: sendInvoiceByEmail
+     * ======================================================================
+     * Sends the generated invoice PDF via email using EmailService.
+     *
+     * Behaviors:
+     * - Skips email sending if EmailService is not available (dev mode)
+     * - Skips if recipient email is missing
+     * - Builds email subject, body, and attachment filename dynamically
+     *
+     * @param payload The InvoicePayload containing email details
+     * @param pdf     The generated invoice PDF in byte[] format
+     */
+    private void sendInvoiceByEmail(InvoicePayload payload, byte[] pdf) {
+        // If EmailService bean is not available (e.g., local development)
+        if (emailService == null) {
+            log.warn("[DEV MODE] EmailService not configured. Simulating email send to {}", payload.emailTo());
+            System.out.println("=== Simulated Email ===");
+            System.out.println("To: " + payload.emailTo());
+            System.out.println("Subject: " + payload.emailSubject());
+            System.out.println("Body: " + payload.emailBody());
+            System.out.println("Attachment size: " + pdf.length + " bytes");
+            return;
         }
 
-        JasperReport jasperReport = JasperCompileManager.compileReport(jrxml);
-
-        List<Item> items = List.of(
-                new Item("Labor", "Labor Work", 50, new BigDecimal("50.00")),
-                new Item("Material", "Boxes", 50, new BigDecimal("50.00")),
-                new Item("Other", "Misc", 50, new BigDecimal("50.00"))
-        );
-
-        BigDecimal subtotal = items.stream()
-                .map(item -> item.amount() != null ? item.amount() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        BigDecimal discount = BigDecimal.ZERO;
-        BigDecimal taxRatePercent = new BigDecimal("5.00"); // 5%
-        BigDecimal totalTax = subtotal.multiply(taxRatePercent).divide(new BigDecimal("100"));
-        BigDecimal total = subtotal.add(totalTax).subtract(discount);
-
-        Map<String, Object> params = new HashMap<>();
-        params.put("fromCompany", "Your Company Name");
-        params.put("fromAddress", "Street Address, City");
-        params.put("fromPhone", "Phone: 555-111-2222");
-        params.put("fromEmail", "info@company.com");
-
-        params.put("clientCompany", "Client Company Name");
-        params.put("contactName", "Contact Name");
-        params.put("clientAddress", "Client Street\nCity");
-        params.put("clientPhone", "Client Phone");
-
-        params.put("invoiceNo", "#" + invoiceId);
-        params.put("invoiceDate", "12/25/2024");
-        params.put("dueDate", "2025-10-01");
-
-        params.put("subtotal", subtotal);
-        params.put("discount", discount);
-        params.put("taxRate", taxRatePercent);
-        params.put("bankName", "Bank Name");
-        params.put("accountNo", "Account No.");
-
-        JasperPrint jasperPrint = JasperFillManager.fillReport(jasperReport, params, new JREmptyDataSource());
-        byte[] pdfBytes = JasperExportManager.exportReportToPdf(jasperPrint);
-
-        log.info("Generated invoice PDF for invoiceId={} (size={} bytes)", invoiceId, pdfBytes != null ? pdfBytes.length : 0);
-        return pdfBytes;
-    }
-
-    public byte[] generateSampleInvoice() throws JRException {
-        log.info("Request to generate sample invoice (no payload)");
-        byte[] pdf = generateInvoice(
-                "Sample Company",
-                "123 Sample Street\nCity",
-                "Sample Company Phone",
-                "sample@company.com",
-                "Sample Client",
-                "456 Client Street\nCity",
-                "555-123-4567",
-                "INV-1001",
-                "2024-10-01",
-                "2024-10-15",
-                "Sample Bank",
-                "1234567890",
-                List.of(
-                        new Item("Labor", "Labor Work", 2, new BigDecimal("100.00")),
-                        new Item("Material", "Material Box", 1, new BigDecimal("50.00"))
-                )
-        );
-        log.info("Sample invoice generated (size={} bytes)", pdf != null ? pdf.length : 0);
-        return pdf;
-    }
-
-    public byte[] generateInvoice(
-            String fromCompany,
-            String fromAddress,
-            String fromPhone,
-            String fromEmail,
-            String clientName,
-            String clientAddress,
-            String clientPhone,
-            String invoiceNo,
-            String invoiceDate,
-            String dueDate,
-            String bankName,
-            String accountNo,
-            List<Item> items
-    ) throws JRException {
-
-        log.info("Request to generate invoice (invoiceNo={}) for client='{}'", invoiceNo, clientName);
-
-        InputStream jrxml = getClass().getResourceAsStream("/reports/invoice.jrxml");
-        if (jrxml == null) {
-            log.error("JRXML template not found at /reports/invoice.jrxml while generating invoiceNo={}", invoiceNo);
-            throw new RuntimeException("invoice.jrxml not found");
+        // Skip sending if no recipient email provided
+        if (payload.emailTo() == null || payload.emailTo().isBlank()) {
+            log.warn("Email address missing. Skipping email send.");
+            return;
         }
 
-        JasperReport jasperReport = JasperCompileManager.compileReport(jrxml);
+        // Build email subject (use default if blank)
+        String subject = (payload.emailSubject() == null || payload.emailSubject().isBlank())
+                ? "Invoice " + payload.invoiceNo()
+                : payload.emailSubject();
 
-        if (items == null) {
-            log.warn("Items list is null for invoiceNo={}, treating as empty list", invoiceNo);
-            items = List.of();
+        // Build email body (use default message if blank)
+        String body = (payload.emailBody() == null || payload.emailBody().isBlank())
+                ? "Please find your invoice attached."
+                : payload.emailBody();
+
+        // Prepare file name for attachment
+        String fileName = (payload.invoiceNo() != null && !payload.invoiceNo().isBlank())
+                ? payload.invoiceNo() + ".pdf"
+                : "invoice.pdf";
+
+        try {
+            // Send the email with PDF attachment using EmailService
+            emailService.sendWithAttachment(payload.emailTo(), subject, body, pdf, fileName);
+            log.info("Invoice emailed successfully to {}", payload.emailTo());
+        } catch (Exception e) {
+            // Log and rethrow exception if email sending fails
+            log.error("Error sending invoice email to {}: {}", payload.emailTo(), e.getMessage(), e);
+            throw new RuntimeException("Email sending failed: " + e.getMessage(), e);
         }
-        log.debug("Calculating subtotal for invoiceNo={}, itemsCount={}", invoiceNo, items.size());
-
-        BigDecimal subtotal = items.stream()
-                .map(item -> item.amount() != null ? item.amount() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        log.debug("Subtotal for invoiceNo={} -> {}", invoiceNo, subtotal);
-
-        BigDecimal discount = BigDecimal.ZERO;
-        BigDecimal taxRatePercent = new BigDecimal("5.00"); // 5%
-        BigDecimal totalTax = subtotal.multiply(taxRatePercent).divide(new BigDecimal("100"));
-        BigDecimal total = subtotal.add(totalTax).subtract(discount);
-
-        log.debug("Computed tax and total for invoiceNo={} : taxRate={}%, totalTax={}, total={}",
-                invoiceNo, taxRatePercent, totalTax, total);
-
-        Map<String, Object> params = new HashMap<>();
-        params.put("fromCompany", fromCompany);
-        params.put("fromAddress", fromAddress);
-        params.put("fromPhone", fromPhone);
-        params.put("fromEmail", fromEmail);
-
-        params.put("clientCompany", clientName);
-        params.put("contactName", clientName);
-        params.put("clientAddress", clientAddress);
-        params.put("clientPhone", clientPhone);
-
-        params.put("invoiceNo", invoiceNo);
-        params.put("invoiceDate", invoiceDate);
-        params.put("dueDate", dueDate);
-
-        params.put("subtotal", subtotal);
-        params.put("discount", discount);
-        params.put("taxRate", taxRatePercent);
-
-        params.put("bankName", bankName);
-        params.put("accountNo", accountNo);
-
-        log.debug("Filling Jasper report for invoiceNo={}", invoiceNo);
-        JasperPrint jasperPrint = JasperFillManager.fillReport(jasperReport, params, new JREmptyDataSource());
-
-        byte[] pdf = JasperExportManager.exportReportToPdf(jasperPrint);
-        log.info("Invoice PDF generated for invoiceNo={} (size={} bytes)", invoiceNo, pdf != null ? pdf.length : 0);
-        return pdf;
     }
+
 }
