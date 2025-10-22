@@ -1,6 +1,5 @@
 package net.sphuta.tms.freelancer.schedulers;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.sphuta.tms.freelancer.dto.InvoicePayload;
 import net.sphuta.tms.freelancer.entity.Invoice;
@@ -16,9 +15,24 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * ===============================================================
+ * ReportScheduler
+ * ===============================================================
+ * Schedules tasks to generate and send invoice reports
+ * at specified intervals:
+ *
+ * 1️⃣ Daily at 12:00 AM
+ * 2️⃣ Last working day of the month at 12:00 AM
+ * 3️⃣ Last working day of the week (Friday) at 12:00 AM
+ * 4️⃣ Mid-month (15th) at 12:00 AM
+ *
+ * ✅ Uses ReportService to handle PDF generation and email sending
+ * ✅ Fetches DRAFT invoices, processes them, and updates status to SENT
+ * ===============================================================
+ */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class ReportScheduler {
 
     @Autowired

@@ -18,12 +18,26 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * ======================================================================
+ * ReportService
+ * ======================================================================
+ * Service class responsible for generating invoice PDFs,
+ * sending them via email, and handling batch processing of invoices.
+ *
+ * ✅ Scheduler-friendly method to process multiple invoices
+ * ✅ Reuses existing PDF generation and email logic
+ * ✅ Robust error handling and logging
+ * ======================================================================
+ */
+
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class ReportService {
 
-    private final InvoiceRepository invoiceRepository;
+    @Autowired
+    private InvoiceRepository invoiceRepository;
+
 
     @Autowired(required = false)
     private EmailService emailService;
@@ -72,11 +86,16 @@ public class ReportService {
      * ======================================================================
      * Generate single invoice PDF (existing logic)
      * ======================================================================
+     * Generates a PDF invoice from the provided payload,
+     * sends it via email, and returns the PDF in the HTTP response.
+     * @param payload InvoicePayload containing all invoice details
+     * @return ResponseEntity with PDF byte array or error message
      */
     public ResponseEntity<?> generateInvoicePdf(InvoicePayload payload) {
         try {
             log.info("Generating dynamic invoice PDF for client: {}", payload.clientName());
 
+            // Load JRXML template from resources
             InputStream jrxml = getClass().getResourceAsStream("/reports/invoice.jrxml");
             if (jrxml == null) {
                 log.error("JRXML template not found at /reports/invoice.jrxml");
@@ -84,8 +103,10 @@ public class ReportService {
                         .body(Map.of("error", "invoice.jrxml template not found"));
             }
 
+            // Compile the JasperReport from JRXML
             JasperReport jasperReport = JasperCompileManager.compileReport(jrxml);
 
+            // Calculate totals
             List<Item> items = payload.items() != null ? payload.items() : List.of();
             BigDecimal subtotal = items.stream()
                     .map(i -> i.amount() != null ? i.amount() : BigDecimal.ZERO)
@@ -95,6 +116,7 @@ public class ReportService {
             BigDecimal totalTax = subtotal.multiply(taxRate).divide(new BigDecimal("100"));
             BigDecimal total = subtotal.add(totalTax);
 
+            // Prepare parameters for JasperReport
             Map<String, Object> params = new HashMap<>();
             params.put("fromCompany", payload.fromCompany());
             params.put("fromAddress", payload.fromAddress());
@@ -118,6 +140,7 @@ public class ReportService {
             params.put("totalTax", totalTax);
             params.put("total", total);
 
+            // Add item data source
             JasperPrint jasperPrint = JasperFillManager.fillReport(jasperReport, params, new JREmptyDataSource());
             byte[] pdf = JasperExportManager.exportReportToPdf(jasperPrint);
             log.info("Invoice PDF generated successfully, size={} bytes", pdf.length);
@@ -149,6 +172,9 @@ public class ReportService {
      * ======================================================================
      * Send email (unchanged)
      * ======================================================================
+     * Sends the generated invoice PDF via email using EmailService.
+     * @param payload InvoicePayload containing email metadata
+     * @param pdf     byte[] array of the generated PDF
      */
     private void sendInvoiceByEmail(InvoicePayload payload, byte[] pdf) {
         if (emailService == null) {
@@ -161,6 +187,7 @@ public class ReportService {
             return;
         }
 
+        // Validate email address
         if (payload.emailTo() == null || payload.emailTo().isBlank()) {
             log.warn("Email address missing. Skipping email send.");
             return;
