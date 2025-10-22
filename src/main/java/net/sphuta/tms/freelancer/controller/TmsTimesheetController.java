@@ -85,7 +85,7 @@ public class TmsTimesheetController {
      * @return detailed timesheet DTO wrapped in TmsApiResponse
      */
     @Operation(summary = "Get Timesheet", description = "Retrieve details of a specific timesheet by ID.")
-    @GetMapping("/timesheets/{id}")
+    @GetMapping("/timesheets/{id:\\d+}")
     public TmsApiResponse<TmsTimesheetDto> get(@PathVariable int id) {
         log.info("GET /api/v1/timesheets/{}", id);
 
@@ -102,7 +102,7 @@ public class TmsTimesheetController {
      * @return updated timesheet DTO wrapped in TmsApiResponse
      */
     @Operation(summary = "Submit Timesheet", description = "Submit a timesheet for review and approval.")
-    @PostMapping("/timesheets/{id}/submit")
+    @PostMapping("/timesheets/{id:\\d+}/submit")
     public TmsApiResponse<TmsTimesheetDto> submit(@PathVariable int id) {
         log.info("POST /api/v1/timesheets/{}/submit", id);
 
@@ -119,7 +119,7 @@ public class TmsTimesheetController {
      * @return success response
      */
     @Operation(summary = "Delete Timesheet", description = "Delete a timesheet and its associated entries by ID.")
-    @DeleteMapping("/timesheets/{id}")
+    @DeleteMapping("/timesheets/{id:\\d+}")
     public TmsApiResponse<Void> delete(@PathVariable int id) {
         log.info("DELETE /api/v1/timesheets/{}", id);
 
@@ -157,7 +157,7 @@ public class TmsTimesheetController {
      * @return BulkUpsertDto summary wrapped in TmsApiResponse
      */
     @Operation(summary = "Bulk Upsert Entries", description = "Insert, update or delete multiple entries in a timesheet.")
-    @PutMapping("/timesheets/{id}/entries")
+    @PutMapping("/timesheets/{id:\\d+}/entries")
     public TmsApiResponse<BulkUpsertDto> bulkUpsert(
             @PathVariable("id") int timesheetId,
             @Valid @RequestBody BulkUpsertDto req) {
@@ -198,7 +198,7 @@ public class TmsTimesheetController {
      * @return success response
      */
     @Operation(summary = "Delete Time Entry", description = "Delete a specific time entry by ID.")
-    @DeleteMapping("/time-entries/{entryId}")
+    @DeleteMapping("/time-entries/{entryId:\\d+}")
     public TmsApiResponse<Void> deleteEntry(@PathVariable("entryId") int entryId) {
         log.info("DELETE /api/v1/time-entries/{}", entryId);
 
@@ -222,6 +222,44 @@ public class TmsTimesheetController {
 
         log.debug("Fetched {} time-entries", data == null ? 0 : data.size());
         return TmsApiResponse.success(TmsMessages.ENTRIES_FETCHED, data);
+    }
+
+    /**
+     * Legacy alias: Get all time entries via /timesheets/entries (some clients may call this path).
+     * Added to avoid static-resource lookup when clients call the older/incorrect path.
+     */
+    @Operation(summary = "Get All Time Entries (alias)", description = "Legacy alias for /time-entries")
+    @GetMapping("/timesheets/entries")
+    public TmsApiResponse<List<TimeEntryDto>> listEntriesAlias() {
+        log.info("GET /api/v1/timesheets/entries (alias)");
+
+        var data = tmsTimeEntryService.getAll();
+
+        log.debug("Fetched {} time-entries (alias)", data == null ? 0 : data.size());
+        return TmsApiResponse.success(TmsMessages.ENTRIES_FETCHED, data);
+    }
+
+    /**
+     * Bulk upsert (insert/update/delete) entries for a timesheet (fallback POST endpoint).
+     *
+     * @param timesheetId timesheet id path parameter
+     * @param req bulk request containing entries and mode
+     * @return BulkUpsertDto summary wrapped in TmsApiResponse
+     */
+    @Operation(summary = "Bulk Upsert Entries (fallback)", description = "Legacy/fallback POST endpoint for bulk upsert of entries on a timesheet.")
+    @PostMapping("/timesheets/{id:\\d+}/entries/bulk-upsert")
+    public TmsApiResponse<BulkUpsertDto> bulkUpsertPost(
+            @PathVariable("id") int timesheetId,
+            @Valid @RequestBody BulkUpsertDto req) {
+
+        log.info("POST /api/v1/timesheets/{}/entries/bulk-upsert incomingRows={}", timesheetId, req == null || req.entries() == null ? 0 : req.entries().size());
+
+        var data = tmsTimesheetService.bulkUpsert(timesheetId, req);
+
+        log.debug("Bulk upsert (POST fallback) for timesheet {} -> inserted={} updated={} deleted={} totalHours={}",
+                timesheetId, data.inserted(), data.updated(), data.deleted(), data.totalHours());
+
+        return TmsApiResponse.success(TmsMessages.BULK_UPSERT_COMPLETED, data);
     }
 
     // ----------------------------
@@ -275,7 +313,7 @@ public class TmsTimesheetController {
      * @return project-level map containing projectName, timesheetID, status, and timeentries (date,hours,taskId,taskName)
      */
     @Operation(summary = "Get entries by project", description = "Return day-by-day entries for a project within the given date range.")
-    @GetMapping("/project/{projectId}")
+    @GetMapping("/project/{projectId:\\d+}")
     public TmsApiResponse<Map<String, Object>> byProject(
             @PathVariable int projectId,
             @RequestParam("start") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,

@@ -65,7 +65,7 @@ public class TmsProjectController {
     )
     @GetMapping("/clients")
     public TmsApiResponse<TmsPageResponse<TmsClientDto>> listClients(
-            @RequestBody TmsClientDto filters) {
+            @ModelAttribute TmsClientDto filters) {
 
         log.info("Fetching clients for project assignment with filters: {}", filters);
 
