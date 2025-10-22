@@ -15,6 +15,22 @@ spring:
   mvc:
     format:
       date: iso                  # Enforces ISO date format for @DateTimeFormat
+  mail:
+    # Use Gmail SMTP - ensure you use an App Password (not your regular account password)
+    host: smtp.gmail.com
+    port: 587
+    username: <your email>
+    password: <user-password>
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls.enable: true
+          starttls.required: true
+          ssl.trust: smtp.gmail.com
+          connectiontimeout: 10000
+          timeout: 10000
+          writetimeout: 10000
 
 server:
   port: 8080                     # Application runs on http://localhost:8080
@@ -23,6 +39,8 @@ logging:
   level:
     root: INFO                   # Default log level
     org.hibernate.SQL: INFO      # Log SQL queries (DEBUG would show bind parameters too)
+    org.springframework.mail: DEBUG
+    jakarta.mail: DEBUG
 
 # Swagger / OpenAPI config
 springdoc:
@@ -47,5 +65,4 @@ springdoc:
 jwt:
   secret: verysecret_jwt_key_for_dev_change_me
   expirationMs: 3600000
-
 

@@ -76,6 +76,8 @@ public class SecurityConfig {
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**").permitAll()
                 .requestMatchers("/h2-console/**").permitAll()
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                // Allow invoice endpoints for testing (DEV ONLY). Remove or secure in production.
+                .requestMatchers("/api/admin/invoices/**").permitAll()
                 .requestMatchers("/api/v1/users").hasAnyRole("USER")
                 .requestMatchers("/api/v1/users/**").hasAnyRole("USER")
                 .anyRequest().authenticated()
