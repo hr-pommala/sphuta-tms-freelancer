@@ -28,8 +28,7 @@ public record InvoicePayload(
         String accountNo,
         List<Item> items,
 
-        // Optional email fields (nullable)
-        Boolean sendEmail,
+        //email metadata
         String emailTo,
         String emailSubject,
         String emailBody

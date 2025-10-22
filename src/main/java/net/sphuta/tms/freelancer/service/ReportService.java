@@ -10,8 +10,6 @@ import org.springframework.stereotype.Service;
 
 import java.io.InputStream;
 import java.math.BigDecimal;
-import java.time.*;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
@@ -22,18 +20,18 @@ import java.util.*;
  *
  * ✅ Primary Use:
  * - Generates invoices based on input data from InvoicePayload DTO.
- * - Optionally sends the generated PDF to the client via email.
+ * - Automatically sends the generated PDF to the client via email.
  *
  * ✅ Features:
  * - Loads and compiles JasperReports JRXML templates.
  * - Dynamically fills report parameters from DTO fields.
  * - Calculates financial totals (subtotal, tax, total).
  * - Exports the filled report to a PDF byte array.
- * - Sends email (if enabled and EmailService is configured).
+ * - Sends email automatically after generation.
  *
  * ✅ Integration Points:
  * - Used by ReportController (/reports/invoice).
- * - Optionally integrates with EmailService.
+ * - Integrates with EmailService (if available).
  */
 @Slf4j
 @Service
@@ -60,7 +58,7 @@ public class ReportService {
      * 2️⃣ Populate report parameters from InvoicePayload
      * 3️⃣ Calculate subtotal, tax, and total
      * 4️⃣ Export report to PDF byte array
-     * 5️⃣ Send via email (if 'sendEmail' flag is true)
+     * 5️⃣ Automatically send invoice email
      * 6️⃣ Return PDF as HTTP ResponseEntity
      *
      * @param payload  DTO containing all invoice data
@@ -130,10 +128,8 @@ public class ReportService {
             byte[] pdf = JasperExportManager.exportReportToPdf(jasperPrint);
             log.info("Invoice PDF generated successfully, size={} bytes", pdf.length);
 
-            // Step 6: If email sending is enabled, trigger email send
-            if (Boolean.TRUE.equals(payload.sendEmail())) {
-                sendInvoiceByEmail(payload, pdf);
-            }
+            // Step 6: Automatically send invoice email (no sendEmail check)
+            sendInvoiceByEmail(payload, pdf);
 
             // Step 7: Prepare response headers for PDF download
             HttpHeaders headers = new HttpHeaders();
