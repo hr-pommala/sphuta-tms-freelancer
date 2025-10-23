@@ -10,6 +10,7 @@ import net.sphuta.tms.freelancer.repository.TmsClientRepository;
 import net.sphuta.tms.freelancer.repository.TmsInvoiceRepository;
 import net.sphuta.tms.freelancer.repository.TmsTimeEntryRepository;
 import net.sphuta.tms.freelancer.repository.TmsTimesheetRepository;
+import net.sphuta.tms.freelancer.util.TmsTimesheetMappers;
 import net.sf.jasperreports.engine.*;
 import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -140,36 +141,52 @@ public class InvoiceGeneratorService {
                         periodEnd = ts.getPeriodEnd();
                     }
 
-                    List<TimeEntryEntity> entries = timeEntryRepo.findByTimesheet(ts);
-                    if (entries == null || entries.isEmpty()) continue;
+                    // Use the timesheet's entries to compute a single invoice line per timesheet
+                    List<TimeEntryEntity> entries = ts.getEntries() != null ? ts.getEntries() : List.of();
 
-                    for (TimeEntryEntity e : entries) {
-                        BigDecimal hours = e.getHours() != null ? e.getHours() : BigDecimal.ZERO;
-                        totalHours = totalHours.add(hours);
+                    // Compute timesheet-level totals (use mapper to sum entries' hours)
+                    BigDecimal tsTotalHours = TmsTimesheetMappers.totalHours(ts);
+                    tsTotalHours = tsTotalHours != null ? tsTotalHours : BigDecimal.ZERO;
 
-                        BigDecimal amount = BigDecimal.ZERO;
-                        BigDecimal rate = BigDecimal.ZERO;
+                    // Determine hourly rate to use for this timesheet (project rate or default)
+                    BigDecimal tsRate = ts.getProject() != null && ts.getProject().getHourlyRate() != null ? ts.getProject().getHourlyRate() : defaultHourlyRate;
 
-                        if (e.getCostAtEntry() != null) {
-                            amount = e.getCostAtEntry();
-                            if (hours.compareTo(BigDecimal.ZERO) > 0) {
-                                rate = amount.divide(hours, 2, BigDecimal.ROUND_HALF_UP);
+                    // Compute timesheet-level amount: prefer per-entry cost overrides, otherwise rate * hours
+                    BigDecimal tsAmount = BigDecimal.ZERO;
+                    if (entries != null && !entries.isEmpty()) {
+                        for (TimeEntryEntity e : entries) {
+                            BigDecimal hours = e.getHours() != null ? e.getHours() : BigDecimal.ZERO;
+                            if (e.getCostAtEntry() != null) {
+                                tsAmount = tsAmount.add(e.getCostAtEntry());
+                            } else {
+                                BigDecimal rate = e.getRateAtEntry() != null ? e.getRateAtEntry() : (tsRate != null ? tsRate : BigDecimal.ZERO);
+                                tsAmount = tsAmount.add(rate.multiply(hours));
                             }
-                        } else {
-                            rate = e.getRateAtEntry() != null ? e.getRateAtEntry() : (ts.getProject() != null && ts.getProject().getHourlyRate() != null ? ts.getProject().getHourlyRate() : defaultHourlyRate);
-                            amount = rate.multiply(hours != null ? hours : BigDecimal.ZERO);
                         }
+                    } else {
+                        // No entries listed on timesheet; compute amount from total hours * tsRate
+                        tsAmount = tsTotalHours.multiply(tsRate != null ? tsRate : BigDecimal.ZERO);
+                    }
+
+                    // Only include timesheets that have non-zero hours (skip empty timesheets)
+                    if (tsTotalHours.compareTo(BigDecimal.ZERO) > 0) {
+                        String desc = (ts.getPeriodStart() != null ? ts.getPeriodStart().toString() : "")
+                                + " - " + (ts.getPeriodEnd() != null ? ts.getPeriodEnd().toString() : "");
+                        String projName = ts.getProject() != null ? ts.getProject().getName() : "";
 
                         InvoiceLineDto line = new InvoiceLineDto(
-                                e.getEntryDate(),
-                                e.getDescription(),
-                                hours,
-                                rate,
-                                amount,
-                                ts.getProject() != null ? ts.getProject().getName() : ""
+                                ts.getPeriodStart(),
+                                desc,
+                                tsTotalHours,
+                                tsRate != null ? tsRate : BigDecimal.ZERO,
+                                tsAmount,
+                                projName
                         );
                         lines.add(line);
-                        totalAmount = totalAmount.add(amount != null ? amount : BigDecimal.ZERO);
+
+                        // Accumulate grand totals
+                        totalHours = totalHours.add(tsTotalHours);
+                        totalAmount = totalAmount.add(tsAmount);
                     }
                 }
 

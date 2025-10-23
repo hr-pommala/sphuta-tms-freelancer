@@ -11,6 +11,7 @@ import net.sphuta.tms.freelancer.repository.TmsClientRepository;
 import net.sphuta.tms.freelancer.repository.TmsProjectRepository;
 import net.sphuta.tms.freelancer.repository.TmsTimeEntryRepository;
 import net.sphuta.tms.freelancer.repository.TmsTimesheetRepository;
+import net.sphuta.tms.freelancer.util.TmsTimesheetMappers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -68,7 +70,7 @@ public class InvoiceController {
                     .body("No active projects found for client id=" + client.getId() + ". Create a project for the client and try again.");
         }
 
-        // Search across all client projects for an APPROVED timesheet that has entries
+        // Search across all client projects for an APPROVED timesheet that has hours (or accept any approved timesheet)
         TimesheetEntity chosenTimesheet = null;
         ProjectEntity chosenProject = null;
         for (ProjectEntity p : clientProjects) {
@@ -77,18 +79,26 @@ public class InvoiceController {
                     .findFirst();
             if (tsOpt.isPresent()) {
                 TimesheetEntity ts = tsOpt.get();
-                List<TimeEntryEntity> entries = timeEntryRepo.findByTimesheet(ts);
-                if (entries != null && !entries.isEmpty()) {
+                // Prefer timesheets that have totalHours > 0, otherwise accept the first approved timesheet
+                BigDecimal totalHours = TmsTimesheetMappers.totalHours(ts);
+                if (totalHours == null) totalHours = BigDecimal.ZERO;
+                if (totalHours.compareTo(BigDecimal.ZERO) > 0) {
                     chosenTimesheet = ts;
                     chosenProject = p;
                     break;
+                } else {
+                    // keep as fallback if no better timesheet found
+                    if (chosenTimesheet == null) {
+                        chosenTimesheet = ts;
+                        chosenProject = p;
+                    }
                 }
             }
         }
 
         if (chosenTimesheet == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("No APPROVED timesheet with time entries found across projects for client id=" + client.getId() + ". Approve a timesheet or add entries and try again.");
+                    .body("No APPROVED timesheet found across projects for client id=" + client.getId() + ". Approve a timesheet and try again.");
         }
 
         // Trigger the invoice generator which will pick up approved timesheets (including this one)
