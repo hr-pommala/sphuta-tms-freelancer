@@ -1,6 +1,7 @@
 package net.sphuta.tms.freelancer.service;
 
 import lombok.extern.slf4j.Slf4j;
+import net.sphuta.tms.freelancer.dto.InvoiceLineDto;
 import net.sphuta.tms.freelancer.entity.ClientEntity;
 import net.sphuta.tms.freelancer.entity.InvoiceEntity;
 import net.sphuta.tms.freelancer.entity.TimeEntryEntity;

@@ -1,4 +1,4 @@
-package net.sphuta.tms.freelancer.service;
+package net.sphuta.tms.freelancer.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
