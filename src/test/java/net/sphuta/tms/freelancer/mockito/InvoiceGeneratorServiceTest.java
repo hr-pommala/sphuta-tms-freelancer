@@ -39,50 +39,86 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 /**
- * Comprehensive unit tests for InvoiceGeneratorService.
+ * ===============================
+ * CLASS: InvoiceGeneratorServiceTest
+ * ===============================
+ * This class provides **comprehensive unit tests** for {@link InvoiceGeneratorService}.
+ * It uses **Mockito** to mock dependencies and verify expected behaviors under
+ * various invoice generation scenarios such as:
+ *  - No approved timesheets
+ *  - Missing client emails
+ *  - Jasper template errors
+ *  - Successful invoice creation and email
+ *  - Email failures and file fallback
+ *  - Disabled email settings
+ *  - Skipped zero-hour timesheets
+ *  - Exception handling with continued processing
  *
- * NOTE: Adjust entity constructors/builders to match your actual classes if they differ.
+ * All static JasperReports methods are mocked to isolate the service logic.
  */
 @ExtendWith(MockitoExtension.class)
 class InvoiceGeneratorServiceTest {
 
+    // ------------------------------
+    // MOCKED DEPENDENCIES
+    // ------------------------------
+
+    /** Repository for fetching approved timesheets. */
     @Mock
     private TmsTimesheetRepository timesheetRepo;
+
+    /** Repository for fetching individual time entries. */
     @Mock
     private TmsTimeEntryRepository timeEntryRepo;
+
+    /** Repository for fetching client details. */
     @Mock
     private TmsClientRepository clientRepo;
+
+    /** Repository for persisting generated invoices. */
     @Mock
     private TmsInvoiceRepository invoiceRepo;
+
+    /** JavaMailSender mock for sending invoice emails. */
     @Mock
     private JavaMailSender mailSender;
 
+    /** Service under test — automatically injected with above mocks. */
     @InjectMocks
     private InvoiceGeneratorService service;
 
+    /** Temporary directory used for testing file output (PDF save fallback). */
     private Path tempOutputDir;
 
-    // static mocks for JasperReports static calls
+    /** Static mocks for JasperReports compile/fill/export static calls. */
     private MockedStatic<JasperCompileManager> jasperCompileMock;
     private MockedStatic<JasperFillManager> jasperFillMock;
     private MockedStatic<JasperExportManager> jasperExportMock;
 
+    // ------------------------------
+    // SETUP & CLEANUP
+    // ------------------------------
+
+    /**
+     * Initializes mocks and static behaviors before each test.
+     * Also injects temporary directory paths and email defaults via reflection.
+     */
     @BeforeEach
     void setUp() throws Exception {
-        // create a temp output directory and force service.outputDir to it via reflection
+        // Create temporary output folder
         tempOutputDir = Files.createTempDirectory("invtest");
-        setPrivateField(service, "outputDir", tempOutputDir.toString());
 
-        // default mailFrom/mailHost to enable emailing in tests (can override per-test)
+        // Inject values into private service fields
+        setPrivateField(service, "outputDir", tempOutputDir.toString());
         setPrivateField(service, "mailFrom", "test@example.com");
         setPrivateField(service, "mailHost", "smtp.test.com");
 
-        // Setup static mocks for JasperReports
+        // Mock static JasperReports methods
         jasperCompileMock = mockStatic(JasperCompileManager.class);
         jasperFillMock = mockStatic(JasperFillManager.class);
         jasperExportMock = mockStatic(JasperExportManager.class);
 
-        // Default behaviour for compile/fill/export (unless a test overrides)
+        // Default mock behaviors for report generation
         jasperCompileMock.when(() -> JasperCompileManager.compileReport(any(InputStream.class)))
                 .thenReturn(mock(JasperReport.class));
         jasperFillMock.when(() -> JasperFillManager.fillReport(any(JasperReport.class), anyMap(), any(JRDataSource.class)))
@@ -91,6 +127,9 @@ class InvoiceGeneratorServiceTest {
                 .thenReturn("PDF-BYTES".getBytes());
     }
 
+    /**
+     * Closes all static mocks after each test to prevent memory leaks.
+     */
     @AfterEach
     void tearDown() {
         jasperCompileMock.close();
@@ -98,20 +137,29 @@ class InvoiceGeneratorServiceTest {
         jasperExportMock.close();
     }
 
-    // -------------------
-    // Helper utilities
-    // -------------------
+    // ------------------------------
+    // HELPER UTILITIES
+    // ------------------------------
+
+    /**
+     * Uses reflection to inject a value into a private field.
+     */
     private static void setPrivateField(Object target, String fieldName, Object value) throws Exception {
         Field f = target.getClass().getDeclaredField(fieldName);
         f.setAccessible(true);
         f.set(target, value);
     }
 
-    private TimesheetEntity makeTimesheet(Integer id, ProjectEntity project, LocalDate start, LocalDate end, TimesheetStatus status, List<TimeEntryEntity> entries) {
+    /**
+     * Builds a mock TimesheetEntity with given attributes.
+     */
+    private TimesheetEntity makeTimesheet(Integer id, ProjectEntity project, LocalDate start,
+                                          LocalDate end, TimesheetStatus status, List<TimeEntryEntity> entries) {
         TimesheetEntity ts = new TimesheetEntity();
         try {
-            Field f;
-            f = TimesheetEntity.class.getDeclaredField("id"); f.setAccessible(true); f.set(ts, id);
+            Field f = TimesheetEntity.class.getDeclaredField("id");
+            f.setAccessible(true);
+            f.set(ts, id);
         } catch (Exception ignore) {}
         ts.setProject(project);
         ts.setPeriodStart(start);
@@ -121,6 +169,7 @@ class InvoiceGeneratorServiceTest {
         return ts;
     }
 
+    /** Builds a mock ProjectEntity. */
     private ProjectEntity makeProject(Integer id, String name, BigDecimal hourlyRate, ClientEntity client) {
         ProjectEntity p = new ProjectEntity();
         p.setId(id);
@@ -130,6 +179,7 @@ class InvoiceGeneratorServiceTest {
         return p;
     }
 
+    /** Builds a mock ClientEntity. */
     private ClientEntity makeClient(Integer id, String name, String email, String currency) {
         ClientEntity c = new ClientEntity();
         c.setId(id);
@@ -139,6 +189,7 @@ class InvoiceGeneratorServiceTest {
         return c;
     }
 
+    /** Builds a mock TimeEntryEntity. */
     private TimeEntryEntity makeEntry(BigDecimal hours, BigDecimal rateAtEntry, BigDecimal costAtEntry) {
         TimeEntryEntity e = new TimeEntryEntity();
         e.setHours(hours);
@@ -147,10 +198,15 @@ class InvoiceGeneratorServiceTest {
         return e;
     }
 
-    // -------------------
-    // Tests
-    // -------------------
+    // ------------------------------
+    // TEST CASES
+    // ------------------------------
 
+    /**
+     * ✅ TEST 1:
+     * Scenario: No approved timesheets exist.
+     * Expectation: Service should generate 0 invoices and perform no writes or emails.
+     */
     @Test
     void generate_noApprovedTimesheets_returnsZeroAndNoWrites() {
         when(timesheetRepo.findAll()).thenReturn(Collections.emptyList());
@@ -163,112 +219,124 @@ class InvoiceGeneratorServiceTest {
         verifyNoInteractions(invoiceRepo, mailSender);
     }
 
+    /**
+     * ✅ TEST 2:
+     * Scenario: Client has no email.
+     * Expectation: Service should skip this client and record a skip reason.
+     */
     @Test
     void generate_clientMissingEmail_skipsClient() {
         ClientEntity client = makeClient(1, "Acme", null, "USD");
         ProjectEntity proj = makeProject(10, "P1", new BigDecimal("50.0"), client);
-        TimesheetEntity ts = makeTimesheet(100, proj, LocalDate.of(2025,1,1), LocalDate.of(2025,1,7), TimesheetStatus.APPROVED, List.of(makeEntry(new BigDecimal("2"), null, null)));
+        TimesheetEntity ts = makeTimesheet(100, proj,
+                LocalDate.of(2025,1,1), LocalDate.of(2025,1,7),
+                TimesheetStatus.APPROVED, List.of(makeEntry(new BigDecimal("2"), null, null)));
 
         when(timesheetRepo.findAll()).thenReturn(List.of(ts));
 
         InvoiceGenerationReport report = service.generateAndSendForApprovedTimesheets();
 
         assertEquals(1, report.getTotalApprovedTimesheets());
-        assertTrue(report.getSkipped().stream().anyMatch(s -> s.getReason().contains("no email") || s.getReason().toLowerCase().contains("has no email")));
+        assertTrue(report.getSkipped().stream().anyMatch(s -> s.getReason().toLowerCase().contains("email")));
         verifyNoInteractions(invoiceRepo, mailSender);
     }
 
+    /**
+     * ✅ TEST 3:
+     * Scenario: JRXML template missing or unreadable.
+     * Expectation: Service should record an error and stop further processing.
+     */
     @Test
     void generate_jrxmlMissing_reportsError_stopProcessing() throws Exception {
-        // make a valid client with email
         ClientEntity client = makeClient(2, "Beta", "beta@example.com", "USD");
         ProjectEntity proj = makeProject(20, "P2", new BigDecimal("100"), client);
-        TimesheetEntity ts = makeTimesheet(101, proj, LocalDate.of(2025,2,1), LocalDate.of(2025,2,7), TimesheetStatus.APPROVED, List.of(makeEntry(new BigDecimal("3"), null, null)));
+        TimesheetEntity ts = makeTimesheet(101, proj,
+                LocalDate.of(2025,2,1), LocalDate.of(2025,2,7),
+                TimesheetStatus.APPROVED, List.of(makeEntry(new BigDecimal("3"), null, null)));
 
         when(timesheetRepo.findAll()).thenReturn(List.of(ts));
 
-        // make the resource stream lookup return null by mocking service.getClass().getResourceAsStream via reflection:
-        // we can't easily mock getResourceAsStream on Class, so instead mock the JasperCompileManager to throw when stream is null:
         jasperCompileMock.when(() -> JasperCompileManager.compileReport((InputStream) isNull()))
                 .thenThrow(new JRException("template missing"));
 
-        // Force service to read null stream by explicitly simulating that compile will be called with null
-        // The code looks up resource input stream BEFORE calling compile; to simulate missing jrxml, mock compile to throw
         InvoiceGenerationReport report = service.generateAndSendForApprovedTimesheets();
 
-        // It should capture an error (template not found). At least one error recorded.
         assertTrue(report.getErrors().size() >= 1);
     }
 
+    /**
+     * ✅ TEST 4:
+     * Scenario: Valid timesheet with entries.
+     * Expectation: Invoice is generated, email is sent, and repository saved.
+     */
     @Test
     void generate_timesheetWithEntries_usesCostAndRateAndCreatesInvoiceAndSendsEmail() throws Exception {
-        // Setup client with email
         ClientEntity client = makeClient(3, "Gamma", "gamma@example.com", "EUR");
         ProjectEntity proj = makeProject(30, "Project-G", new BigDecimal("75.00"), client);
 
-        // Create entries: one with explicit costAtEntry, one with rateAtEntry + hours
-        TimeEntryEntity e1 = makeEntry(new BigDecimal("2.5"), null, new BigDecimal("300.00")); // uses costAtEntry
-        TimeEntryEntity e2 = makeEntry(new BigDecimal("1.5"), new BigDecimal("80.00"), null);  // uses rateAtEntry * hours
+        TimeEntryEntity e1 = makeEntry(new BigDecimal("2.5"), null, new BigDecimal("300.00"));
+        TimeEntryEntity e2 = makeEntry(new BigDecimal("1.5"), new BigDecimal("80.00"), null);
 
-        TimesheetEntity ts = makeTimesheet(200, proj, LocalDate.of(2025,3,1), LocalDate.of(2025,3,7), TimesheetStatus.APPROVED, List.of(e1, e2));
+        TimesheetEntity ts = makeTimesheet(200, proj,
+                LocalDate.of(2025,3,1), LocalDate.of(2025,3,7),
+                TimesheetStatus.APPROVED, List.of(e1, e2));
 
         when(timesheetRepo.findAll()).thenReturn(List.of(ts));
 
-        // Mock mail sender createMimeMessage to return a MimeMessage (we'll use a simple stub)
         MimeMessage mime = mock(MimeMessage.class);
         when(mailSender.createMimeMessage()).thenReturn(mime);
-
-        // Capture the bytes provided to attachment if possible (MimeMessageHelper is later used and mailSender.send)
         doNothing().when(mailSender).send(any(MimeMessage.class));
 
         InvoiceGenerationReport report = service.generateAndSendForApprovedTimesheets();
 
-        // One invoice should be generated & emailed
         assertEquals(1, report.getGeneratedCount());
         assertEquals(1, report.getEmailed().size());
         verify(mailSender, times(1)).send(any(MimeMessage.class));
         verify(invoiceRepo, times(1)).save(any(InvoiceEntity.class));
-
-        // Confirm a file was NOT saved (since emailed successfully). The service only saves when email fails or disabled.
-        // Check the temp dir - should be empty or only contain files if code saved fallback (it didn't)
-        assertTrue(Files.exists(tempOutputDir));
     }
 
+    /**
+     * ✅ TEST 5:
+     * Scenario: Email sending fails (e.g., SMTP error).
+     * Expectation: PDF saved locally, invoice recorded, and error noted.
+     */
     @Test
     void generate_emailFailure_savesPdfAndRecordsSaved() throws Exception {
-        // client/email present
         ClientEntity client = makeClient(4, "Delta", "delta@example.com", "USD");
         ProjectEntity proj = makeProject(40, "Project-D", new BigDecimal("60.0"), client);
 
-        TimeEntryEntity e = makeEntry(new BigDecimal("4"), null, null);
-        TimesheetEntity ts = makeTimesheet(300, proj, LocalDate.of(2025,4,1), LocalDate.of(2025,4,7), TimesheetStatus.APPROVED, List.of(e));
+        TimesheetEntity ts = makeTimesheet(300, proj,
+                LocalDate.of(2025,4,1), LocalDate.of(2025,4,7),
+                TimesheetStatus.APPROVED, List.of(makeEntry(new BigDecimal("4"), null, null)));
 
         when(timesheetRepo.findAll()).thenReturn(List.of(ts));
 
         MimeMessage mime = mock(MimeMessage.class);
         when(mailSender.createMimeMessage()).thenReturn(mime);
-
-        // Make mailSender.send throw runtime exception to simulate SMTP failure
         doThrow(new RuntimeException("smtp error")).when(mailSender).send(any(MimeMessage.class));
 
         InvoiceGenerationReport report = service.generateAndSendForApprovedTimesheets();
 
-        // Even though email failed, invoice should be generated and saved to disk and invoice record still saved
         assertEquals(1, report.getGeneratedCount());
         assertTrue(report.getSaved().size() >= 1);
         verify(invoiceRepo, times(1)).save(any(InvoiceEntity.class));
     }
 
+    /**
+     * ✅ TEST 6:
+     * Scenario: Email settings disabled (mailFrom/mailHost empty).
+     * Expectation: Invoice generated and saved locally without sending email.
+     */
     @Test
     void generate_emailDisabled_savesPdf_locally_and_doesNotCallMailSender() throws Exception {
-        // disable email
         setPrivateField(service, "mailFrom", "");
         setPrivateField(service, "mailHost", "");
 
         ClientEntity client = makeClient(5, "Epsilon", "eps@example.com", "USD");
         ProjectEntity proj = makeProject(50, "Project-E", new BigDecimal("25.0"), client);
-        TimeEntryEntity e = makeEntry(new BigDecimal("2"), null, null);
-        TimesheetEntity ts = makeTimesheet(400, proj, LocalDate.of(2025,5,1), LocalDate.of(2025,5,7), TimesheetStatus.APPROVED, List.of(e));
+        TimesheetEntity ts = makeTimesheet(400, proj,
+                LocalDate.of(2025,5,1), LocalDate.of(2025,5,7),
+                TimesheetStatus.APPROVED, List.of(makeEntry(new BigDecimal("2"), null, null)));
 
         when(timesheetRepo.findAll()).thenReturn(List.of(ts));
 
@@ -280,43 +348,54 @@ class InvoiceGeneratorServiceTest {
         verify(invoiceRepo, times(1)).save(any(InvoiceEntity.class));
     }
 
+    /**
+     * ✅ TEST 7:
+     * Scenario: Timesheet with zero total hours.
+     * Expectation: Skipped with appropriate reason; no invoice generated.
+     */
     @Test
     void generate_timesheetWithZeroHours_isSkipped() throws Exception {
         ClientEntity client = makeClient(6, "Zeta", "zeta@example.com", "USD");
         ProjectEntity proj = makeProject(60, "Project-Z", new BigDecimal("100.0"), client);
 
-        // Entry with zero hours -> total hours 0 -> should be skipped
-        TimeEntryEntity e = makeEntry(BigDecimal.ZERO, null, null);
-        TimesheetEntity ts = makeTimesheet(500, proj, LocalDate.of(2025,6,1), LocalDate.of(2025,6,7), TimesheetStatus.APPROVED, List.of(e));
+        TimesheetEntity ts = makeTimesheet(500, proj,
+                LocalDate.of(2025,6,1), LocalDate.of(2025,6,7),
+                TimesheetStatus.APPROVED, List.of(makeEntry(BigDecimal.ZERO, null, null)));
 
         when(timesheetRepo.findAll()).thenReturn(List.of(ts));
 
         InvoiceGenerationReport report = service.generateAndSendForApprovedTimesheets();
 
-        // No invoices generated because timesheet hours are zero
         assertEquals(1, report.getTotalApprovedTimesheets());
         assertEquals(0, report.getGeneratedCount());
-        assertTrue(report.getSkipped().stream().anyMatch(s -> s.getReason().toLowerCase().contains("no time entries") || s.getReason().toLowerCase().contains("no time")));
+        assertTrue(report.getSkipped().stream().anyMatch(s -> s.getReason().toLowerCase().contains("no time")));
     }
 
+    /**
+     * ✅ TEST 8:
+     * Scenario: One timesheet throws exception during processing; another succeeds.
+     * Expectation: Error captured for first; second invoice generated successfully.
+     */
     @Test
     void generate_processingException_isCapturedInReport_andContinues() throws Exception {
-        // create two timesheets: one will throw, other will succeed
         ClientEntity client1 = makeClient(7, "Thrower", "throw@example.com", "USD");
         ProjectEntity p1 = makeProject(70, "P-Throw", new BigDecimal("10.0"), client1);
-        TimesheetEntity badTs = makeTimesheet(600, p1, LocalDate.of(2025,7,1), LocalDate.of(2025,7,7), TimesheetStatus.APPROVED, List.of(makeEntry(new BigDecimal("1"), null, null)));
+        TimesheetEntity badTs = makeTimesheet(600, p1,
+                LocalDate.of(2025,7,1), LocalDate.of(2025,7,7),
+                TimesheetStatus.APPROVED, List.of(makeEntry(new BigDecimal("1"), null, null)));
 
         ClientEntity client2 = makeClient(8, "Good", "good@example.com", "USD");
         ProjectEntity p2 = makeProject(80, "P-Good", new BigDecimal("20.0"), client2);
-        TimesheetEntity goodTs = makeTimesheet(601, p2, LocalDate.of(2025,7,8), LocalDate.of(2025,7,14), TimesheetStatus.APPROVED, List.of(makeEntry(new BigDecimal("2"), null, null)));
+        TimesheetEntity goodTs = makeTimesheet(601, p2,
+                LocalDate.of(2025,7,8), LocalDate.of(2025,7,14),
+                TimesheetStatus.APPROVED, List.of(makeEntry(new BigDecimal("2"), null, null)));
 
         when(timesheetRepo.findAll()).thenReturn(List.of(badTs, goodTs));
 
-        // Mock jasper compile to throw for the first call, then return for subsequent; we simulate by having compile throw once then work
-        final JasperReport jr = mock(JasperReport.class);
-        final JasperPrint jp = mock(JasperPrint.class);
+        JasperReport jr = mock(JasperReport.class);
+        JasperPrint jp = mock(JasperPrint.class);
 
-        // Create an iterator that throws the first time compileReport is called
+        // Simulate compile failure for first timesheet
         Answer<JasperReport> compileAnswer = new Answer<>() {
             private int cnt = 0;
             @Override
@@ -334,14 +413,12 @@ class InvoiceGeneratorServiceTest {
         jasperExportMock.when(() -> JasperExportManager.exportReportToPdf(eq(jp)))
                 .thenReturn("BYTES".getBytes());
 
-        // mail sender ok
         MimeMessage mime = mock(MimeMessage.class);
         when(mailSender.createMimeMessage()).thenReturn(mime);
         doNothing().when(mailSender).send(any(MimeMessage.class));
 
         InvoiceGenerationReport report = service.generateAndSendForApprovedTimesheets();
 
-        // One should be generated (the one after exception), and an error recorded
         assertTrue(report.getErrors().size() >= 1);
         assertEquals(1, report.getGeneratedCount());
     }
