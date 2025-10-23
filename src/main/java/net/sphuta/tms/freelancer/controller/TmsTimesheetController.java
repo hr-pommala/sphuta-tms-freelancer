@@ -66,7 +66,7 @@ public class TmsTimesheetController {
      */
     @Operation(summary = "Create Timesheet", description = "Create a new timesheet for a project with a given period.")
     @PostMapping("/timesheets")
-    public ResponseEntity<TmsApiResponse<TmsTimesheetDto>> create(
+    public TmsApiResponse<TmsTimesheetDto> create(
             @Valid @RequestBody TmsTimesheetDto req) {
 
         log.info("POST /api/v1/timesheets projectId={} periodStart={} periodEnd={}",
@@ -75,8 +75,7 @@ public class TmsTimesheetController {
         var data = tmsTimesheetService.create(req);
 
         log.debug("Created timesheet id={} status={}", data.timesheetId(), data.status());
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(TmsApiResponse.success(HttpStatus.CREATED, TmsMessages.TIMESHEET_CREATED, data));
+        return TmsApiResponse.created(TmsMessages.TIMESHEET_CREATED, data);
     }
 
     /**
@@ -86,14 +85,14 @@ public class TmsTimesheetController {
      * @return detailed timesheet DTO wrapped in TmsApiResponse
      */
     @Operation(summary = "Get Timesheet", description = "Retrieve details of a specific timesheet by ID.")
-    @GetMapping("/timesheets/{id}")
-    public ResponseEntity<TmsApiResponse<TmsTimesheetDto>> get(@PathVariable int id) {
+    @GetMapping("/timesheets/{id:\\d+}")
+    public TmsApiResponse<TmsTimesheetDto> get(@PathVariable int id) {
         log.info("GET /api/v1/timesheets/{}", id);
 
         var data = tmsTimesheetService.get(id);
 
         log.debug("Fetched timesheet id={} entriesCount={}", data.timesheetId(), data.entries() == null ? 0 : data.entries().size());
-        return ResponseEntity.ok(TmsApiResponse.success(HttpStatus.OK, TmsMessages.TIMESHEET_FETCHED, data));
+        return TmsApiResponse.success(TmsMessages.TIMESHEET_FETCHED, data);
     }
 
     /**
@@ -103,14 +102,14 @@ public class TmsTimesheetController {
      * @return updated timesheet DTO wrapped in TmsApiResponse
      */
     @Operation(summary = "Submit Timesheet", description = "Submit a timesheet for review and approval.")
-    @PostMapping("/timesheets/{id}/submit")
-    public ResponseEntity<TmsApiResponse<TmsTimesheetDto>> submit(@PathVariable int id) {
+    @PostMapping("/timesheets/{id:\\d+}/submit")
+    public TmsApiResponse<TmsTimesheetDto> submit(@PathVariable int id) {
         log.info("POST /api/v1/timesheets/{}/submit", id);
 
         var data = tmsTimesheetService.submit(id);
 
         log.debug("Timesheet {} submitted status={}", id, data.status());
-        return ResponseEntity.ok(TmsApiResponse.success(HttpStatus.OK, TmsMessages.TIMESHEET_SUBMITTED, data));
+        return TmsApiResponse.success(TmsMessages.TIMESHEET_SUBMITTED, data);
     }
 
     /**
@@ -120,14 +119,14 @@ public class TmsTimesheetController {
      * @return success response
      */
     @Operation(summary = "Delete Timesheet", description = "Delete a timesheet and its associated entries by ID.")
-    @DeleteMapping("/timesheets/{id}")
-    public ResponseEntity<TmsApiResponse<Void>> delete(@PathVariable int id) {
+    @DeleteMapping("/timesheets/{id:\\d+}")
+    public TmsApiResponse<Void> delete(@PathVariable int id) {
         log.info("DELETE /api/v1/timesheets/{}", id);
 
         tmsTimesheetService.delete(id);
 
         log.debug("Deleted timesheet id={}", id);
-        return ResponseEntity.ok(TmsApiResponse.success(HttpStatus.OK, TmsMessages.TIMESHEET_DELETED));
+        return TmsApiResponse.success(TmsMessages.TIMESHEET_DELETED, null);
     }
 
     /**
@@ -137,13 +136,13 @@ public class TmsTimesheetController {
      */
     @Operation(summary = "Get All Timesheets", description = "Retrieve all timesheets with details.")
     @GetMapping("/timesheets")
-    public ResponseEntity<TmsApiResponse<List<TmsTimesheetDto>>> getAll() {
+    public TmsApiResponse<List<TmsTimesheetDto>> getAll() {
         log.info("GET /api/v1/timesheets");
 
         var data = tmsTimesheetService.getAll();
 
         log.debug("Fetched {} timesheets", data == null ? 0 : data.size());
-        return ResponseEntity.ok(TmsApiResponse.success(HttpStatus.OK, TmsMessages.TIMESHEETS_FETCHED, data));
+        return TmsApiResponse.success(TmsMessages.TIMESHEETS_FETCHED, data);
     }
 
     // ----------------------------
@@ -158,8 +157,8 @@ public class TmsTimesheetController {
      * @return BulkUpsertDto summary wrapped in TmsApiResponse
      */
     @Operation(summary = "Bulk Upsert Entries", description = "Insert, update or delete multiple entries in a timesheet.")
-    @PutMapping("/timesheets/{id}/entries")
-    public ResponseEntity<TmsApiResponse<BulkUpsertDto>> bulkUpsert(
+    @PutMapping("/timesheets/{id:\\d+}/entries")
+    public TmsApiResponse<BulkUpsertDto> bulkUpsert(
             @PathVariable("id") int timesheetId,
             @Valid @RequestBody BulkUpsertDto req) {
 
@@ -170,7 +169,7 @@ public class TmsTimesheetController {
         log.debug("Bulk upsert for timesheet {} -> inserted={} updated={} deleted={} totalHours={}",
                 timesheetId, data.inserted(), data.updated(), data.deleted(), data.totalHours());
 
-        return ResponseEntity.ok(TmsApiResponse.success(HttpStatus.OK, TmsMessages.BULK_UPSERT_COMPLETED, data));
+        return TmsApiResponse.success(TmsMessages.BULK_UPSERT_COMPLETED, data);
     }
 
     /**
@@ -181,7 +180,7 @@ public class TmsTimesheetController {
      */
     @Operation(summary = "Create Time Entry", description = "Create a new time entry under an existing timesheet.")
     @PostMapping("/time-entries")
-    public ResponseEntity<TmsApiResponse<TimeEntryDto>> createEntry(
+    public TmsApiResponse<TimeEntryDto> createEntry(
             @Valid @RequestBody TimeEntryDto req) {
 
         log.info("POST /api/v1/time-entries timesheetId={} entryDate={} hours={}", req.timesheetId(), req.entryDate(), req.hours());
@@ -189,8 +188,7 @@ public class TmsTimesheetController {
         var data = tmsTimeEntryService.create(req);
 
         log.debug("Created time entry id={} timesheetId={} hours={}", data.id(), data.timesheetId(), data.hours());
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(TmsApiResponse.success(HttpStatus.CREATED, TmsMessages.TIME_ENTRY_CREATED, data));
+        return TmsApiResponse.created(TmsMessages.TIME_ENTRY_CREATED, data);
     }
 
     /**
@@ -200,14 +198,14 @@ public class TmsTimesheetController {
      * @return success response
      */
     @Operation(summary = "Delete Time Entry", description = "Delete a specific time entry by ID.")
-    @DeleteMapping("/time-entries/{entryId}")
-    public ResponseEntity<TmsApiResponse<Void>> deleteEntry(@PathVariable("entryId") int entryId) {
+    @DeleteMapping("/time-entries/{entryId:\\d+}")
+    public TmsApiResponse<Void> deleteEntry(@PathVariable("entryId") int entryId) {
         log.info("DELETE /api/v1/time-entries/{}", entryId);
 
         tmsTimeEntryService.delete(entryId);
 
         log.debug("Deleted time entry id={}", entryId);
-        return ResponseEntity.ok(TmsApiResponse.success(HttpStatus.OK, TmsMessages.TIME_ENTRY_DELETED));
+        return TmsApiResponse.success(TmsMessages.TIME_ENTRY_DELETED,null);
     }
 
     /**
@@ -217,13 +215,51 @@ public class TmsTimesheetController {
      */
     @Operation(summary = "Get All Time Entries", description = "Retrieve all time entries across all timesheets.")
     @GetMapping("/time-entries")
-    public ResponseEntity<TmsApiResponse<List<TimeEntryDto>>> getAllTimeEntries() {
+    public TmsApiResponse<List<TimeEntryDto>> getAllTimeEntries() {
         log.info("GET /api/v1/time-entries");
 
         var data = tmsTimeEntryService.getAll();
 
         log.debug("Fetched {} time-entries", data == null ? 0 : data.size());
-        return ResponseEntity.ok(TmsApiResponse.success(HttpStatus.OK, TmsMessages.ENTRIES_FETCHED, data));
+        return TmsApiResponse.success(TmsMessages.ENTRIES_FETCHED, data);
+    }
+
+    /**
+     * Legacy alias: Get all time entries via /timesheets/entries (some clients may call this path).
+     * Added to avoid static-resource lookup when clients call the older/incorrect path.
+     */
+    @Operation(summary = "Get All Time Entries (alias)", description = "Legacy alias for /time-entries")
+    @GetMapping("/timesheets/entries")
+    public TmsApiResponse<List<TimeEntryDto>> listEntriesAlias() {
+        log.info("GET /api/v1/timesheets/entries (alias)");
+
+        var data = tmsTimeEntryService.getAll();
+
+        log.debug("Fetched {} time-entries (alias)", data == null ? 0 : data.size());
+        return TmsApiResponse.success(TmsMessages.ENTRIES_FETCHED, data);
+    }
+
+    /**
+     * Bulk upsert (insert/update/delete) entries for a timesheet (fallback POST endpoint).
+     *
+     * @param timesheetId timesheet id path parameter
+     * @param req bulk request containing entries and mode
+     * @return BulkUpsertDto summary wrapped in TmsApiResponse
+     */
+    @Operation(summary = "Bulk Upsert Entries (fallback)", description = "Legacy/fallback POST endpoint for bulk upsert of entries on a timesheet.")
+    @PostMapping("/timesheets/{id:\\d+}/entries/bulk-upsert")
+    public TmsApiResponse<BulkUpsertDto> bulkUpsertPost(
+            @PathVariable("id") int timesheetId,
+            @Valid @RequestBody BulkUpsertDto req) {
+
+        log.info("POST /api/v1/timesheets/{}/entries/bulk-upsert incomingRows={}", timesheetId, req == null || req.entries() == null ? 0 : req.entries().size());
+
+        var data = tmsTimesheetService.bulkUpsert(timesheetId, req);
+
+        log.debug("Bulk upsert (POST fallback) for timesheet {} -> inserted={} updated={} deleted={} totalHours={}",
+                timesheetId, data.inserted(), data.updated(), data.deleted(), data.totalHours());
+
+        return TmsApiResponse.success(TmsMessages.BULK_UPSERT_COMPLETED, data);
     }
 
     // ----------------------------
@@ -238,7 +274,7 @@ public class TmsTimesheetController {
      */
     @Operation(summary = "Get weekly time entries", description = "Return weekly (Mon-Sun) time entries aggregated per project for the specified user.")
     @GetMapping("/weekly")
-    public ResponseEntity<TmsApiResponse<Map<Integer, Map<String, Object>>>> weekly(
+    public TmsApiResponse<Map<Integer, Map<String, Object>>> weekly(
             @RequestParam("userEmail") String userEmail) {
 
         log.info("GET /api/v1/weekly userEmail={}", userEmail);
@@ -246,7 +282,7 @@ public class TmsTimesheetController {
         var resp = tmsTimesheetService.getWeeklyTimeEntries(userEmail);
 
         log.debug("Weekly response prepared for user={} projects={}", userEmail, resp == null ? 0 : resp.size());
-        return ResponseEntity.ok(TmsApiResponse.success(HttpStatus.OK, TmsMessages.TIMESHEET_FETCHED, resp));
+        return TmsApiResponse.success(TmsMessages.TIMESHEET_FETCHED, resp);
     }
 
     /**
@@ -257,7 +293,7 @@ public class TmsTimesheetController {
      */
     @Operation(summary = "Get monthly time entries", description = "Return current-month time entries aggregated per project for the specified user.")
     @GetMapping("/monthly")
-    public ResponseEntity<TmsApiResponse<Map<Integer, Map<String, Object>>>> monthly(
+    public TmsApiResponse<Map<Integer, Map<String, Object>>> monthly(
             @RequestParam("userEmail") String userEmail) {
 
         log.info("GET /api/v1/monthly userEmail={}", userEmail);
@@ -265,7 +301,7 @@ public class TmsTimesheetController {
         var resp = tmsTimesheetService.getMonthlyTimeEntries(userEmail);
 
         log.debug("Monthly response prepared for user={} projects={}", userEmail, resp == null ? 0 : resp.size());
-        return ResponseEntity.ok(TmsApiResponse.success(HttpStatus.OK, TmsMessages.TIMESHEET_FETCHED, resp));
+        return TmsApiResponse.success(TmsMessages.TIMESHEET_FETCHED, resp);
     }
 
     /**
@@ -277,8 +313,8 @@ public class TmsTimesheetController {
      * @return project-level map containing projectName, timesheetID, status, and timeentries (date,hours,taskId,taskName)
      */
     @Operation(summary = "Get entries by project", description = "Return day-by-day entries for a project within the given date range.")
-    @GetMapping("/project/{projectId}")
-    public ResponseEntity<TmsApiResponse<Map<String, Object>>> byProject(
+    @GetMapping("/project/{projectId:\\d+}")
+    public TmsApiResponse<Map<String, Object>> byProject(
             @PathVariable int projectId,
             @RequestParam("start") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
             @RequestParam("end") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
@@ -288,6 +324,6 @@ public class TmsTimesheetController {
         var resp = tmsTimesheetService.getTimeEntriesByProject(projectId, start, end);
 
         log.debug("Project {} response rows={}", projectId, resp == null ? 0 : ((List<?>) resp.getOrDefault("timeentries", List.of())).size());
-        return ResponseEntity.ok(TmsApiResponse.success(HttpStatus.OK, TmsMessages.TIMESHEET_FETCHED, resp));
+        return TmsApiResponse.success(TmsMessages.TIMESHEET_FETCHED, resp);
     }
 }

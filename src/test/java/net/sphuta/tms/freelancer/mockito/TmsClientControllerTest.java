@@ -3,12 +3,11 @@ package net.sphuta.tms.freelancer.mockito;
 import com.fasterxml.jackson.databind.ObjectMapper;
 //import net.sphuta.tms.freelancer.controller.TimeClientTimeEntryController;
 import net.sphuta.tms.freelancer.controller.TmsClientController;
-import net.sphuta.tms.freelancer.controller.TmsClientEstimateController;
+//import net.sphuta.tms.freelancer.controller.TmsClientEstimateController;
 //import net.sphuta.tms.freelancer.controller.TmsClientInvoiceController;
 import net.sphuta.tms.freelancer.dto.*;
 import net.sphuta.tms.freelancer.service.impl.TmsClientServiceImpl;
-import net.sphuta.tms.freelancer.service.impl.TmsEstimateService;
-import net.sphuta.tms.freelancer.service.impl.TmsInvoiceService;
+//import net.sphuta.tms.freelancer.service.impl.TmsInvoiceService;
 //import net.sphuta.tms.freelancer.service.impl.TmsTimeEntryService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -27,13 +26,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import lombok.extern.slf4j.Slf4j;
 
-import java.time.LocalDate;
-import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static java.util.Collections.emptyList;
 import static net.sphuta.tms.freelancer.constants.TmsMessages.*;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -57,8 +53,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * <p><b>Controllers covered:</b></p>
 
  * - {@link TmsClientController} <br>
- * - {@link TmsClientEstimateController} <br>
-
  *
  * <p>Logging policy for tests:
  * - DEBUG: test setup, mock stubbing, input/params. <br>
@@ -67,11 +61,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @Slf4j
 @WebMvcTest(controllers = {
-
-//        TimeClientTimeEntryController.class,
         TmsClientController.class,
-        TmsClientEstimateController.class,
-//        TmsClientInvoiceController.class
 })
 @AutoConfigureMockMvc(addFilters = false)  // ✅ disables Spring Security filters in MockMvc
 public class TmsClientControllerTest {
@@ -106,18 +96,6 @@ public class TmsClientControllerTest {
     @MockBean
     TmsClientServiceImpl clientService;
 
-    /**
-     * Mocked Estimate service used by TmsClientEstimateController.
-     */
-    @MockBean
-    TmsEstimateService estimateService;
-
-    /**
-     * Mocked Invoice service used by TmsClientInvoiceController.
-     */
-    @MockBean
-    TmsInvoiceService invoiceService;
-
     // -----------------------------
     // TEST DATA
     // -----------------------------
@@ -144,8 +122,8 @@ public class TmsClientControllerTest {
                 .lastName(null)
                 .email("billing@acme.com")
                 .isActive(true)
-                .createdDt(OffsetDateTime.parse("2025-08-28T11:44:28Z"))
-                .updatedDt(OffsetDateTime.parse("2025-08-29T15:22:10Z"))
+                .createdDt(null)
+                .updatedDt(null)
                 .build();
 
         log.debug("Test setup complete - sampleClient initialized: id={}, email={}",
@@ -237,7 +215,8 @@ public class TmsClientControllerTest {
             log.debug("Starting test: list_ok - preparing page result and stubbing clientService.list(...)");
 
             Page<TmsClientDto> page = new PageImpl<>(List.of(sampleClient), PageRequest.of(0, 25), 1);
-            when(clientService.list(true, "", 0, 25)).thenReturn(page);
+            // Controller now forwards a TmsClientDto filter; mock the current service signature
+            when(clientService.listClients(any())).thenReturn(page);
 
             mvc.perform(get(CLIENT_BASE_PATH)
                             .param("active", "true")
@@ -249,7 +228,7 @@ public class TmsClientControllerTest {
                     .andExpect(jsonPath("$.data[0].companyName").value("Acme LLC"))
                     .andExpect(jsonPath("$.data[0].email").value("billing@acme.com"));
 
-            verify(clientService).list(true, "", 0, 25);
+            verify(clientService).listClients(any());
 
             log.info("Test list_ok completed - service.list verified");
         }
@@ -445,4 +424,3 @@ public class TmsClientControllerTest {
     }
 
 }
-

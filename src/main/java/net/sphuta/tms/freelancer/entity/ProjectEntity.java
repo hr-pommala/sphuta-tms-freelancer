@@ -40,12 +40,6 @@ import java.time.LocalDate;
         uniqueConstraints = {
                 // Ensures that a client cannot have multiple projects with the same name.
                 @UniqueConstraint(name = "uq_project_per_client", columnNames = {"client_id", "name"})
-        },
-        indexes = {
-                // Index for faster lookups by client ID.
-                @Index(name = "ix_projects_client", columnList = "client_id"),
-                // Index for faster search by project name.
-                @Index(name = "ix_projects_name", columnList = "name")
         }
 )
 @Data

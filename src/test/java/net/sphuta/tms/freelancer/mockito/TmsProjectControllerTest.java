@@ -1,7 +1,7 @@
 package net.sphuta.tms.freelancer.mockito;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import net.sphuta.tms.freelancer.constants.ApiMessageConstants;
+import net.sphuta.tms.freelancer.constants.TmsMessages;
 import net.sphuta.tms.freelancer.controller.TmsProjectController;
 import net.sphuta.tms.freelancer.dto.TmsClientDto;
 import net.sphuta.tms.freelancer.dto.TmsProjectDto;
@@ -71,7 +71,7 @@ class TmsProjectControllerTest {
                 .build();
         Page<TmsClientDto> page = new PageImpl<>(List.of(c1));
 
-        Mockito.when(service.listClients(eq(""), eq(0), eq(100))).thenReturn(page);
+        Mockito.when(service.listClients(any())).thenReturn(page);
 
         mvc.perform(get("/api/v1/projects/clients")
                         .queryParam("active", "true")
@@ -81,7 +81,7 @@ class TmsProjectControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.message").value(ApiMessageConstants.CLIENTS_FETCHED))
+                .andExpect(jsonPath("$.message").value(TmsMessages.CLIENTS_FETCHED))
                 .andExpect(jsonPath("$.data.content", hasSize(1)))
                 .andExpect(jsonPath("$.data.content[0].id").value(1))
                 .andExpect(jsonPath("$.data.content[0].companyName").value("Acme LLC"))
@@ -103,8 +103,7 @@ class TmsProjectControllerTest {
         var dto = sampleProjectDto(101, true);
         Page<TmsProjectDto> page = new PageImpl<>(List.of(dto));
 
-        Mockito.when(service.listProjects(eq(true), isNull(), eq(""), eq(0), eq(25)))
-                .thenReturn(page);
+        Mockito.when(service.listProjects(any())).thenReturn(page);
 
         mvc.perform(get("/api/v1/projects/projects")
                         .queryParam("active", "true")
@@ -113,7 +112,7 @@ class TmsProjectControllerTest {
                         .queryParam("size", "25"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.message").value(ApiMessageConstants.PROJECTS_FETCHED_SUCCESS))
+                .andExpect(jsonPath("$.message").value(TmsMessages.PROJECTS_FETCHED_SUCCESS))
                 .andExpect(jsonPath("$.data.content", hasSize(1)))
                 .andExpect(jsonPath("$.data.content[0].id").value(101))
                 .andExpect(jsonPath("$.data.content[0].projectName").value("Backend API"))
@@ -130,8 +129,7 @@ class TmsProjectControllerTest {
         var dto = sampleProjectDto(102, false);
         Page<TmsProjectDto> page = new PageImpl<>(List.of(dto));
 
-        Mockito.when(service.listProjects(eq(false), isNull(), eq(""), eq(0), eq(25)))
-                .thenReturn(page);
+        Mockito.when(service.listProjects(any())).thenReturn(page);
 
         mvc.perform(get("/api/v1/projects/projects")
                         .queryParam("active", "false")
@@ -153,8 +151,7 @@ class TmsProjectControllerTest {
         var dto = sampleProjectDto(103, true);
         Page<TmsProjectDto> page = new PageImpl<>(List.of(dto));
 
-        Mockito.when(service.listProjects(eq(true), eq(5), eq("backend"), eq(0), eq(25)))
-                .thenReturn(page);
+        Mockito.when(service.listProjects(any())).thenReturn(page);
 
         mvc.perform(get("/api/v1/projects/projects")
                         .queryParam("active", "true")
@@ -176,21 +173,25 @@ class TmsProjectControllerTest {
     void create_ok() throws Exception {
         var created = sampleProjectDto(201, true);
 
-        var requestBody = new TmsProjectDto(
-                0,      // id (server-assigned)
-                null,   // client (response only)
-                1,      // clientId
-                null,   // userId (response only, filled by server)
-                "Backend API",
-                "ACME-BE",
-                new BigDecimal("65.00"),
-                LocalDate.of(2025, 9, 1),
-                LocalDate.of(2025, 9, 30),
-                "MVP build",
-                true,
-                null,
-                null
-        );
+        var requestBody = TmsProjectDto.builder()
+                .id(0)
+                .client(null)
+                .clientId(1)
+                .userId(null)
+                .projectName("Backend API")
+                .code("ACME-BE")
+                .hourlyRate(new BigDecimal("65.00"))
+                .startDate(LocalDate.of(2025, 9, 1))
+                .endDate(LocalDate.of(2025, 9, 30))
+                .description("MVP build")
+                .isActive(true)
+                .createdDt(null)
+                .updatedDt(null)
+                .active(null)
+                .search(null)
+                .page(null)
+                .size(null)
+                .build();
 
         Mockito.when(service.createProject(Mockito.any(TmsProjectDto.class))).thenReturn(created);
 
@@ -201,7 +202,7 @@ class TmsProjectControllerTest {
                 .andExpect(header().string("Location", containsString("/api/v1/projects/201")))
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.statusCode").value(201))
-                .andExpect(jsonPath("$.message").value(ApiMessageConstants.PROJECT_CREATED))
+                .andExpect(jsonPath("$.message").value(TmsMessages.PROJECT_CREATED))
                 .andExpect(jsonPath("$.data.id").value(201))
                 .andExpect(jsonPath("$.data.projectName").value("Backend API"));
     }
@@ -215,41 +216,45 @@ class TmsProjectControllerTest {
     void put_ok() throws Exception {
         int id = 301;
 
-        var updated = new TmsProjectDto(
-                id,
-                TmsClientDto.builder()
-                        .id(1)
-                        .userId(1)
-                        .companyName("Acme LLC")
-                        .build(),
-                1,      // clientId
-                1,      // userId (response only)
-                "Backend API v2",
-                "ACME-BE",
-                new BigDecimal("70.00"),
-                LocalDate.of(2025, 9, 5),
-                LocalDate.of(2025, 10, 15),
-                "Scope expanded",
-                true,
-                "2025-08-25T18:20:00Z",
-                "2025-08-25T18:20:00Z"
-        );
+        var updated = TmsProjectDto.builder()
+                .id(id)
+                .client(TmsClientDto.builder().id(1).userId(1).companyName("Acme LLC").build())
+                .clientId(1)
+                .userId(1)
+                .projectName("Backend API v2")
+                .code("ACME-BE")
+                .hourlyRate(new BigDecimal("70.00"))
+                .startDate(LocalDate.of(2025, 9, 5))
+                .endDate(LocalDate.of(2025, 10, 15))
+                .description("Scope expanded")
+                .isActive(true)
+                .createdDt("2025-08-25T18:20:00Z")
+                .updatedDt("2025-08-25T18:20:00Z")
+                .active(null)
+                .search(null)
+                .page(null)
+                .size(null)
+                .build();
 
-        var body = new TmsProjectDto(
-                id,
-                null,
-                1,
-                null,   // userId ignored in request
-                "Backend API v2",
-                "ACME-BE",
-                new BigDecimal("70.00"),
-                LocalDate.of(2025, 9, 5),
-                LocalDate.of(2025, 10, 15),
-                "Scope expanded",
-                true,
-                null,
-                null
-        );
+        var body = TmsProjectDto.builder()
+                .id(id)
+                .client(null)
+                .clientId(1)
+                .userId(null)
+                .projectName("Backend API v2")
+                .code("ACME-BE")
+                .hourlyRate(new BigDecimal("70.00"))
+                .startDate(LocalDate.of(2025, 9, 5))
+                .endDate(LocalDate.of(2025, 10, 15))
+                .description("Scope expanded")
+                .isActive(true)
+                .createdDt(null)
+                .updatedDt(null)
+                .active(null)
+                .search(null)
+                .page(null)
+                .size(null)
+                .build();
 
         Mockito.when(service.updateProject(eq(id), Mockito.any(TmsProjectDto.class)))
                 .thenReturn(updated);
@@ -259,7 +264,7 @@ class TmsProjectControllerTest {
                         .content(om.writeValueAsString(body)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.message").value(ApiMessageConstants.PROJECT_UPDATED))
+                .andExpect(jsonPath("$.message").value(TmsMessages.PROJECT_UPDATED))
                 .andExpect(jsonPath("$.data.projectName").value("Backend API v2"));
     }
 
@@ -278,7 +283,7 @@ class TmsProjectControllerTest {
         mvc.perform(post("/api/v1/projects/projects/{id}/archive", id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.message").value(ApiMessageConstants.PROJECT_ARCHIVED))
+                .andExpect(jsonPath("$.message").value(TmsMessages.PROJECT_ARCHIVED))
                 .andExpect(jsonPath("$.data.isActive").value(false));
     }
 
@@ -297,7 +302,7 @@ class TmsProjectControllerTest {
         mvc.perform(post("/api/v1/projects/projects/{id}/unarchive", id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.message").value(ApiMessageConstants.PROJECT_UNARCHIVED))
+                .andExpect(jsonPath("$.message").value(TmsMessages.PROJECT_UNARCHIVED))
                 .andExpect(jsonPath("$.data.isActive").value(true));
     }
 
@@ -314,7 +319,7 @@ class TmsProjectControllerTest {
         mvc.perform(delete("/api/v1/projects/projects/{id}", id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.message").value(ApiMessageConstants.PROJECT_DELETED))
+                .andExpect(jsonPath("$.message").value(TmsMessages.PROJECT_DELETED))
                 .andExpect(jsonPath("$.data").doesNotExist());
 
         Mockito.verify(service).deleteProject(id);
@@ -337,20 +342,24 @@ class TmsProjectControllerTest {
                 .userId(1)
                 .companyName("Acme LLC")
                 .build();
-        return new TmsProjectDto(
-                id != null ? id : 0,
-                client,
-                client.id(),
-                client.userId(), // userId added in response
-                "Backend API",
-                "ACME-BE",
-                new BigDecimal("65.00"),
-                LocalDate.of(2025, 9, 1),
-                LocalDate.of(2025, 9, 30),
-                "MVP build",
-                isActive,
-                "2025-08-25T18:20:00Z",
-                "2025-08-25T18:20:00Z"
-        );
+        return TmsProjectDto.builder()
+                .id(id != null ? id : 0)
+                .client(client)
+                .clientId(client.id())
+                .userId(client.userId())
+                .projectName("Backend API")
+                .code("ACME-BE")
+                .hourlyRate(new BigDecimal("65.00"))
+                .startDate(LocalDate.of(2025, 9, 1))
+                .endDate(LocalDate.of(2025, 9, 30))
+                .description("MVP build")
+                .isActive(isActive)
+                .createdDt("2025-08-25T18:20:00Z")
+                .updatedDt("2025-08-25T18:20:00Z")
+                .active(null)
+                .search(null)
+                .page(null)
+                .size(null)
+                .build();
     }
 }

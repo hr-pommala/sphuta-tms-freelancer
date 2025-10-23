@@ -67,7 +67,11 @@ public final class TmsProjectMapper {
                 e.getDescription(),
                 e.isActive(),
                 e.getCreatedDt() != null ? FORMATTER.format(e.getCreatedDt()) : null,
-                e.getUpdatedDt() != null ? FORMATTER.format(e.getUpdatedDt()) : null
+                e.getUpdatedDt() != null ? FORMATTER.format(e.getUpdatedDt()) : null,
+                null,   // Boolean active (optional, can default to null)
+                null,   // String search
+                null,   // Integer page
+                null    // Integer size
         );
     }
 

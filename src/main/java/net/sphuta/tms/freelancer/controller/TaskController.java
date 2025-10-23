@@ -35,6 +35,7 @@ public class TaskController {
     @Autowired
     private TaskService taskService;
 
+
     /** Create a new task within a project.
      * @param projectId ID of the project to which the task belongs.
      * Must match the projectId in the request body if provided.
@@ -42,9 +43,9 @@ public class TaskController {
      * @return ResponseEntity with created TaskDto and HTTP status 201 (Created).
      * @throws IllegalArgumentException if projectId in path and body do not match.
      */
-    @Operation(summary = "Create Task")
+    @Operation(summary = "Create Task", description = "Create a new task within a specified project")
     @PostMapping("/projects/{projectId}/tasks")
-    public ResponseEntity<TmsApiResponse<TaskDto>> create(
+    public TmsApiResponse<TaskDto> create(
             @PathVariable int projectId,
             @Valid @RequestBody TaskDto req) {
 
@@ -56,8 +57,7 @@ public class TaskController {
 
         log.debug("Task created successfully: {}", created);
 
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(TmsApiResponse.success(HttpStatus.CREATED, TmsMessages.ENTITIES_CREATED, created));
+        return TmsApiResponse.created( TmsMessages.ENTITIES_CREATED, created);
     }
 
     /** Update an existing task.
@@ -65,9 +65,9 @@ public class TaskController {
      * @param req TaskDto containing updated task details.
      * @return ResponseEntity with updated TaskDto and HTTP status 200 (OK).
      */
-    @Operation(summary = "Update Task")
+    @Operation(summary = "Update Task", description = "Update an existing task by its ID")
     @PutMapping("/tasks/{id}")
-    public ResponseEntity<TmsApiResponse<TaskDto>> update(
+    public TmsApiResponse<TaskDto> update(
             @PathVariable int id,
             @Valid @RequestBody TaskDto req) {
 
@@ -77,16 +77,16 @@ public class TaskController {
 
         log.debug("Task updated successfully: {}", updated);
 
-        return ResponseEntity.ok(TmsApiResponse.success(HttpStatus.OK, TmsMessages.ENTITIES_UPDATED, updated));
+        return TmsApiResponse.success(TmsMessages.ENTITIES_UPDATED, updated);
     }
 
     /** Get a task by ID.
      * @param id ID of the task to retrieve.
      * @return ResponseEntity with TaskDto and HTTP status 200 (OK).
      */
-    @Operation(summary = "Get Task")
+    @Operation(summary = "Get Task", description = "Retrieve a task by its ID")
     @GetMapping("/tasks/{id}")
-    public ResponseEntity<TmsApiResponse<TaskDto>> get(@PathVariable int id) {
+    public TmsApiResponse<TaskDto> get(@PathVariable int id) {
 
         log.info("Fetching task with ID: {}", id);
 
@@ -94,16 +94,16 @@ public class TaskController {
 
         log.debug("Fetched task: {}", data);
 
-        return ResponseEntity.ok(TmsApiResponse.success(HttpStatus.OK, TmsMessages.ENTITY_FETCHED, data));
+        return TmsApiResponse.success(TmsMessages.ENTITY_FETCHED, data);
     }
 
     /** List tasks by project ID.
      * @param projectId ID of the project whose tasks to list.
      * @return ResponseEntity with list of TaskDto and HTTP status 200 (OK).
      */
-    @Operation(summary = "List tasks by project")
+    @Operation(summary = "List tasks by project", description = "List all tasks associated with a specific project ID")
     @GetMapping("/projects/{projectId}/tasks")
-    public ResponseEntity<TmsApiResponse<List<TaskDto>>> listByProject(@PathVariable int projectId) {
+    public TmsApiResponse<List<TaskDto>> listByProject(@PathVariable int projectId) {
 
         log.info("Listing tasks for projectId: {}", projectId);
 
@@ -111,15 +111,15 @@ public class TaskController {
 
         log.debug("Found {} tasks for projectId: {}", list.size(), projectId);
 
-        return ResponseEntity.ok(TmsApiResponse.success(HttpStatus.OK, TmsMessages.ENTITIES_FETCHED, list));
+        return TmsApiResponse.success(TmsMessages.ENTITIES_FETCHED, list);
     }
 
     /** List all tasks.
      * @return ResponseEntity with list of all TaskDto and HTTP status 200 (OK).
      */
-    @Operation(summary = "List all tasks")
+    @Operation(summary = "List all tasks", description = "Retrieve a list of all tasks across all projects")
     @GetMapping("/tasks")
-    public ResponseEntity<TmsApiResponse<List<TaskDto>>> listAll() {
+    public TmsApiResponse<List<TaskDto>> listAll() {
 
         log.info("Listing all tasks");
 
@@ -127,16 +127,16 @@ public class TaskController {
 
         log.debug("Found {} tasks in total", list.size());
 
-        return ResponseEntity.ok(TmsApiResponse.success(HttpStatus.OK, TmsMessages.ENTRIES_FETCHED, list));
+        return TmsApiResponse.success(TmsMessages.ENTRIES_FETCHED, list);
     }
 
     /** Delete a task by ID.
      * @param id ID of the task to delete.
      * @return ResponseEntity with HTTP status 200 (OK) and deletion message.
      */
-    @Operation(summary = "Delete Task")
+    @Operation(summary = "Delete Task", description = "Delete a task by its ID")
     @DeleteMapping("/tasks/{id}")
-    public ResponseEntity<TmsApiResponse<Void>> delete(@PathVariable int id) {
+    public TmsApiResponse<Void> delete(@PathVariable int id) {
 
         log.warn("Deleting task with ID: {}", id);
 
@@ -144,7 +144,7 @@ public class TaskController {
 
         log.info("Task deleted successfully with ID: {}", id);
 
-        return ResponseEntity.ok(TmsApiResponse.success(HttpStatus.OK, TmsMessages.ENTITY_DELETED));
+        return TmsApiResponse.success(TmsMessages.ENTITY_DELETED, null);
     }
 }
 

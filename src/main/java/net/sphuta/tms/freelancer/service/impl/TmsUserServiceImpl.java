@@ -1,10 +1,14 @@
 package net.sphuta.tms.freelancer.service.impl;
 
 import lombok.extern.slf4j.Slf4j;
+import net.sphuta.tms.freelancer.constants.TmsMessages;
 import net.sphuta.tms.freelancer.dto.TmsUserDto;
+import net.sphuta.tms.freelancer.entity.User;
+import net.sphuta.tms.freelancer.entity.UserEntity;
 import net.sphuta.tms.freelancer.exception.ConflictException;
 import net.sphuta.tms.freelancer.exception.NotFoundException;
 import net.sphuta.tms.freelancer.repository.TmsUserRepository;
+import net.sphuta.tms.freelancer.repository.UserRepository;
 import net.sphuta.tms.freelancer.service.TmsUserService;
 import net.sphuta.tms.freelancer.util.TmsUserMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,13 +25,23 @@ public class TmsUserServiceImpl implements TmsUserService {
     @Autowired
     private TmsUserRepository tmsUserRepository;
 
+    @Autowired
+    private EmailValidationService emailValidationService;
+
+    @Autowired
+    private UserRepository userRepository; // auth table
+
+
     @Override
     public TmsUserDto createUser(TmsUserDto request) {
         log.info("Creating new user with email {}", request.email());
 
+        // ✅ Validate email across both tables
+        emailValidationService.validateEmailUnique(request.email());
+
         tmsUserRepository.findByEmail(request.email()).ifPresent(u -> {
             log.warn("Attempted to create user with existing email {}", request.email());
-            throw new ConflictException("Email already exists");
+            throw new ConflictException(TmsMessages.EMAIL_ALREADY_EXISTS);
         });
 
         var saved = tmsUserRepository.save(TmsUserMapper.toEntity(request));
@@ -43,7 +57,7 @@ public class TmsUserServiceImpl implements TmsUserService {
                 .map(TmsUserMapper::toResponse)
                 .orElseThrow(() -> {
                     log.error("User not found with ID {}", id);
-                    return new NotFoundException("User not existed with this id: " + id);
+                    return new NotFoundException(String.format(TmsMessages.USER_NOT_FOUND_BY_ID, + id));
                 });
     }
 
@@ -65,7 +79,7 @@ public class TmsUserServiceImpl implements TmsUserService {
         var user = tmsUserRepository.findById(id)
                 .orElseThrow(() -> {
                     log.error("User not found with ID {}", id);
-                    return new NotFoundException("User not existed with this id: " + id);
+                    return new NotFoundException(String.format(TmsMessages.USER_NOT_FOUND_BY_ID + id));
                 });
 
         // Update full set of fields using mapper
@@ -85,10 +99,42 @@ public class TmsUserServiceImpl implements TmsUserService {
         var user = tmsUserRepository.findById(id)
                 .orElseThrow(() -> {
                     log.error("User not found with ID {}", id);
-                    return new NotFoundException("User not existed with this id: " + id);
+                    return new NotFoundException(String.format(TmsMessages.USER_NOT_FOUND_BY_ID + id));
                 });
 
         tmsUserRepository.delete(user);
         log.debug("User deleted successfully with ID {}", id);
+    }
+
+    /**
+     * Fetches combined info from auth table (User) and profile table (UserEntity)
+     */
+    public TmsUserDto getCombinedByEmail(String email) {
+
+        // Optional: ensure email exists in at least one table
+        emailValidationService.validateEmailUnique(email); // will throw if exists? careful
+        // If you want to fetch even existing, skip the above line
+
+        UserEntity profile = tmsUserRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("Profile user not found"));
+
+        User auth = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("Auth user not found"));
+
+        return TmsUserDto.builder()
+                .id(profile.getId())
+                .email(profile.getEmail())
+                .fullName(profile.getFullName())
+                .phone(profile.getPhone())
+                .status(profile.getStatus())
+                .emailVerified(profile.isEmailVerified()) // use isEmailVerified() for primitive boolean
+                .timezone(profile.getTimezone())
+                .locale(profile.getLocale())
+                .currency(profile.getCurrency())
+                .avatarUrl(profile.getAvatarUrl())
+                .isActive(profile.getIsActive())
+                // auth info
+                .passwordHash(auth.getPasswordHash())
+                .build();
     }
 }

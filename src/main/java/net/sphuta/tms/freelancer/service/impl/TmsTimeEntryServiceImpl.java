@@ -1,11 +1,12 @@
 package net.sphuta.tms.freelancer.service.impl;
 
+import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
+import net.sphuta.tms.freelancer.constants.TmsMessages;
 import net.sphuta.tms.freelancer.dto.TimeEntryDto;
 import net.sphuta.tms.freelancer.entity.TaskEntity;
 import net.sphuta.tms.freelancer.entity.TimeEntryEntity;
 import net.sphuta.tms.freelancer.entity.TimesheetEntity;
-import net.sphuta.tms.freelancer.exception.ApiExceptions;
 import net.sphuta.tms.freelancer.exception.ConflictException;
 import net.sphuta.tms.freelancer.exception.NotFoundException;
 import net.sphuta.tms.freelancer.repository.TmsTimeEntryRepository;
@@ -19,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import net.sphuta.tms.freelancer.entity.ProjectEntity;
 import net.sphuta.tms.freelancer.repository.TmsProjectRepository;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetTime;
 import java.util.List;
 import java.util.Optional;
@@ -74,7 +76,7 @@ public class TmsTimeEntryServiceImpl implements TmsTimeEntryService {
      * @return a response DTO representing the created time entry
      * @throws NotFoundException    if the timesheet does not exist
      * @throws ConflictException    if the timesheet is locked
-     * @throws ApiExceptions.ValidationException if hours or entry date are invalid
+     * @throws ValidationException if hours or entry date are invalid
      */
     @Override
     public TimeEntryDto create(TimeEntryDto req) {
@@ -85,26 +87,35 @@ public class TmsTimeEntryServiceImpl implements TmsTimeEntryService {
         TimesheetEntity t = timesheetRepo.findById(req.timesheetId())
                 .orElseThrow(() -> {
                     log.warn("create time-entry: timesheet not found: {}", req.timesheetId());
-                    return new NotFoundException("Timesheet not found");
+                    return new NotFoundException(TmsMessages.TIMESHEET_NOT_FOUND);
                 });
 
         // Ensure timesheet is mutable
         if (!t.getStatus().isMutable()) {
             log.warn("create time-entry: timesheet={} status={} locked", t.getId(), t.getStatus());
-            throw new ConflictException("Timesheet is LOCKED and cannot be modified");
+            throw new ConflictException(TmsMessages.TIMESHEET_LOCKED);
         }
 
-        // Validate entry date is within timesheet period
-        if (req.entryDate().isBefore(t.getPeriodStart()) || req.entryDate().isAfter(t.getPeriodEnd())) {
-            log.warn("create time-entry: entryDate {} outside [{}, {}] for timesheet={}",
-                    req.entryDate(), t.getPeriodStart(), t.getPeriodEnd(), t.getId());
-            throw new ApiExceptions.ValidationException("entryDate outside timesheet period");
+        // Fetch project start date (for allowing backdated entries)
+        LocalDate projectStartDate = projectRepository.findById(t.getProjectId())
+                .map(ProjectEntity::getStartDate)
+                .orElseThrow(() -> {
+                    log.warn("create time-entry: project not found for projectId={}", t.getProjectId());
+                    return new NotFoundException(TmsMessages.PROJECT_NOT_FOUND);
+                });
+
+        // Updated validation: allow entries within project range, not just timesheet period
+        if (req.entryDate().isBefore(projectStartDate) || req.entryDate().isAfter(t.getPeriodEnd())) {
+            log.warn("create time-entry: entryDate {} outside project range [{}, {}] for timesheet={}",
+                    req.entryDate(), projectStartDate, t.getPeriodEnd(), t.getId());
+            throw new ValidationException("entryDate outside project active range");
         }
+
 
         // Validate hours > 0
         if (Optional.ofNullable(req.hours()).filter(h -> h.compareTo(BigDecimal.ZERO) > 0).isEmpty()) {
             log.warn("create time-entry: invalid hours={} for timesheet={}", req.hours(), t.getId());
-            throw new ApiExceptions.ValidationException("hours must be > 0");
+            throw new ValidationException(TmsMessages.HOURS_INVALID);
         }
 
         // Compute cost if rate present
@@ -178,7 +189,7 @@ public class TmsTimeEntryServiceImpl implements TmsTimeEntryService {
 
         var e = entryRepo.findById(id).orElseThrow(() -> {
             log.warn("delete time-entry: not found entryId={}", id);
-            return new NotFoundException("Time entry not found");
+            return new NotFoundException(TmsMessages.TIME_ENTRY_NOT_FOUND);
         });
 
         if (Optional.ofNullable(e.getDescription())
@@ -186,7 +197,7 @@ public class TmsTimeEntryServiceImpl implements TmsTimeEntryService {
                 .filter(desc -> desc.contains("[invoiced]"))
                 .isPresent()) {
             log.warn("delete time-entry: invoiced entryId={}", id);
-            throw new ConflictException("Time entry already invoiced; cannot delete");
+            throw new ConflictException(TmsMessages.TIME_ENTRY_INVOICED);
         }
 
         entryRepo.delete(e);

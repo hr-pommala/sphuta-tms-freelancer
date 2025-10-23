@@ -71,9 +71,9 @@ public record TmsInvoiceDto(
 
         /** Timestamp when the invoice was created (system-managed, response only). */
         @Schema(description = "Record creation timestamp", example = "2025-08-28T11:44:28Z", accessMode = Schema.AccessMode.READ_ONLY)
-        OffsetDateTime createdAt,
+        OffsetDateTime createdDt,
 
         /** Timestamp when the invoice was last updated (system-managed, response only). */
         @Schema(description = "Record last updated timestamp", example = "2025-08-29T15:22:10Z", accessMode = Schema.AccessMode.READ_ONLY)
-        OffsetDateTime updatedAt
+        OffsetDateTime updatedDt
 ) {}

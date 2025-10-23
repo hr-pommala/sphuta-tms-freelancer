@@ -66,7 +66,7 @@ public interface TmsTimesheetRepository extends JpaRepository<TimesheetEntity, I
             * Overlap condition: timesheet.periodStart <= end AND timesheet.periodEnd >= start
      */
     @Query("SELECT t FROM TimesheetEntity t WHERE t.projectId = :projectId AND t.periodStart <= :end AND t.periodEnd >= :start")
-    List<TimesheetEntity> findByProjectIdAndPeriodOverlapping(@Param("projectId") int projectId,
+    List<TimesheetEntity> findByProjectIdAndPeriodOverlapping(@Param("projectId") Integer projectId,
                                                               @Param("start") LocalDate start,
                                                               @Param("end") LocalDate end);
 }

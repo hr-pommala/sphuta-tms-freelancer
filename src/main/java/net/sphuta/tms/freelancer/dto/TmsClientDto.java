@@ -39,7 +39,7 @@ public record TmsClientDto(
 
         /** Auto-generated primary key for the client (read-only). */
         @Schema(description = "Client ID (auto-incremented)", example = "101", accessMode = Schema.AccessMode.READ_ONLY)
-        int id,
+        Integer id,
 
         // ------------------------------------------------------------------------
         // CONTACT DETAILS
@@ -169,5 +169,17 @@ public record TmsClientDto(
 
         /** Computed display name (read-only, usually first + last name). */
         @Schema(description = "Full display name", example = "Swathi Medisetti", accessMode = Schema.AccessMode.READ_ONLY)
-        String name
+        String name,
+
+        @Schema(description = "Filter by active clients", accessMode = Schema.AccessMode.READ_ONLY)
+        String active,           // ✅ true = only active
+
+        @Schema(description = "Search term for client names", accessMode = Schema.AccessMode.READ_ONLY)
+        String search,            // ✅ free text search
+
+        @Schema(description = "Page number for pagination", accessMode = Schema.AccessMode.READ_ONLY)
+        Integer page,             // ✅ 0-based page index
+
+        @Schema(description = "Page size for pagination", accessMode = Schema.AccessMode.READ_ONLY)
+        Integer size              // ✅ number of records per page
 ) {}

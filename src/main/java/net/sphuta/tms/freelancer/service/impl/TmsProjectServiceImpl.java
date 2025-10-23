@@ -60,17 +60,23 @@ public class TmsProjectServiceImpl implements TmsProjectService {
 
     /**
      * Retrieve a paginated list of active clients with optional search.
-     *
-     * @param search search keyword (name/email/company), can be null or blank
-     * @param page   page index (0-based)
-     * @param size   number of records per page
+     * @param
+     *  - search: search keyword (name/email/company), can be null or blank
+     *  - page:   page index (0-based)
+     *  - size:   number of records per page
      * @return a {@link Page} of {@link TmsClientDto}
      */
     @Override
     @Transactional(readOnly = true)
-    public Page<TmsClientDto> listClients(String search, int page, int size) {
-        log.debug("listClients(search='{}', page={}, size={})", search, page, size);
+    public Page<TmsClientDto> listClients(TmsClientDto filters) {
 
+        // ✅ Extracting fields safely from filters DTO
+        String search = filters.search();
+        int page = (filters.page() == null || filters.page() < 0) ? 0 : filters.page();
+        int size = (filters.size() == null || filters.size() <= 0) ? 10 : filters.size();
+
+        log.debug("Listing clients | active={}, search='{}', page={}, size={}",
+                filters.active(), search, page, size);
         // Pageable configuration: sorted by companyName ascending for stable UI dropdowns
         var pageable = PageRequest.of(page, size, Sort.by("companyName").ascending());
 
@@ -237,20 +243,28 @@ public class TmsProjectServiceImpl implements TmsProjectService {
 
     /**
      * List projects with filters and pagination.
-     *
-     * @param active   true = active projects only, false = archived
-     * @param clientId optional filter by client ID
-     * @param search   optional search term (applies to project name/code/etc.)
-     * @param page     page index (0-based)
-     * @param size     number of records per page
+     @param filters filter DTO containing:
+      *                <ul>
+      *                  <li>{@link TmsProjectDto active} – true for active projects, false for archived</li>
+      *                  <li>{@link TmsProjectDto clientId} – optional filter by owner (client ID)</li>
+      *                  <li>{@link TmsProjectDto search} – optional case-insensitive substring search on project name</li>
+      *                  <li>{@link TmsProjectDto page} – 0-based page index</li>
+      *                  <li>{@link TmsProjectDto size} – number of items per page</li>
+      *                </ul>
      * @return a {@link Page} of {@link TmsProjectDto}
      */
     @Override
     @Transactional(readOnly = true)
-    public Page<TmsProjectDto> listProjects(boolean active, Integer clientId, String search, int page, int size) {
+    public Page<TmsProjectDto> listProjects(TmsProjectDto filters) {
+
+        boolean active = filters.active() != null ? filters.active() : true;
+        Integer clientId = filters.clientId();
+        String search = filters.search() != null ? filters.search() : "";
+        int page = filters.page() != null ? filters.page() : 0;
+        int size = filters.size() != null ? filters.size() : 25;
+
         log.debug("listProjects(active={}, clientId={}, search='{}', page={}, size={})",
                 active, clientId, search, page, size);
-
         // Pageable sorted by project name
         var pageable = PageRequest.of(page, size, Sort.by("name").ascending());
 
