@@ -1,9 +1,9 @@
 package net.sphuta.tms.freelancer.service.impl;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.sphuta.tms.freelancer.repository.TmsUserRepository;
 import net.sphuta.tms.freelancer.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
@@ -28,14 +28,16 @@ import org.springframework.stereotype.Service;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
+
 public class EmailValidationService {
 
     /** Repository for auth_users table */
-    private final UserRepository userRepo;
+    @Autowired
+    private UserRepository userRepo;
 
     /** Repository for users table */
-    private final TmsUserRepository tmsUserRepo;
+    @Autowired
+    private TmsUserRepository tmsUserRepo;
 
     /**
      * Validates that the given email does not exist in either the auth_users or users tables.

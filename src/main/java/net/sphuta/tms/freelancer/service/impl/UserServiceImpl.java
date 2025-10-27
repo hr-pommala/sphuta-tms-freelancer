@@ -1,6 +1,5 @@
 package net.sphuta.tms.freelancer.service.impl;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.sphuta.tms.freelancer.constants.TmsMessages;
 import net.sphuta.tms.freelancer.dto.AuthRequests;
@@ -29,7 +28,6 @@ import java.util.*;
  * Logging has been added for observability
  */
 @Service
-@RequiredArgsConstructor
 @Transactional
 @Slf4j
 public class UserServiceImpl implements UserService {

@@ -1,10 +1,8 @@
 package net.sphuta.tms.freelancer.service.impl;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.sphuta.tms.freelancer.dto.TmsInvoiceDto;
 import net.sphuta.tms.freelancer.entity.InvoiceEntity;
-import net.sphuta.tms.freelancer.entity.TimeEntryEntity;
 import net.sphuta.tms.freelancer.exception.TmsException;
 import net.sphuta.tms.freelancer.repository.TmsInvoiceRepository;
 import net.sphuta.tms.freelancer.repository.TmsTimeEntryRepository;
@@ -40,7 +38,6 @@ import java.util.List;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class TmsInvoiceService {
 
     @Autowired
