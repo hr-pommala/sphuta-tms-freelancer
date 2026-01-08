@@ -70,6 +70,10 @@ public class InvoiceController {
                     .body("No active projects found for client id=" + client.getId() + ". Create a project for the client and try again.");
         }
 
+        if(clientProjects.size() > 5) {
+            clientProjects = clientProjects.subList(0, 5); // limit to first 5 projects for performance
+        }
+
         // Search across all client projects for an APPROVED timesheet that has hours (or accept any approved timesheet)
         TimesheetEntity chosenTimesheet = null;
         ProjectEntity chosenProject = null;
