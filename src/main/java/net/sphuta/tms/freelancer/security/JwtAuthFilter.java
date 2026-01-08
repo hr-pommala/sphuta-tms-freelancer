@@ -47,8 +47,19 @@ public class JwtAuthFilter implements Filter {
                 String subject = claims.getSubject();
                 @SuppressWarnings("unchecked")
                 var roles = (List<String>) claims.get("roles");
+                // Debugging: print basic info - subject and roles (safe for dev)
+                try {
+                    System.out.println("[JwtAuthFilter] subject=" + subject + " roles=" + roles);
+                } catch (Exception ignore) {}
                 var authorities = roles.stream()
-                        .map(r -> new org.springframework.security.core.authority.SimpleGrantedAuthority(r))
+                        .map(r -> {
+                            // Normalize authority names: ensure they start with ROLE_ so Spring's hasRole/hasAnyRole checks work
+                            String name = (r == null) ? "" : r;
+                            if (!name.startsWith("ROLE_")) {
+                                name = "ROLE_" + name;
+                            }
+                            return new org.springframework.security.core.authority.SimpleGrantedAuthority(name);
+                        })
                         .collect(Collectors.toList());
                 var auth = new UsernamePasswordAuthenticationToken(subject, null, authorities);
                 SecurityContextHolder.getContext().setAuthentication(auth);

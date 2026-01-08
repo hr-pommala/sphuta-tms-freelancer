@@ -19,10 +19,9 @@ import java.time.LocalDateTime;
  * <p>
  * Lombok annotations are used to reduce boilerplate (getters, setters, constructors, builder).
  */
-@Getter
-@Setter
-@NoArgsConstructor
+@Data
 @AllArgsConstructor
+@NoArgsConstructor
 @Builder
 @Entity
 @Table(name = "settings_preferences")
@@ -73,6 +72,6 @@ public class SettingsPreferences {
      * Hibernate’s {@link UpdateTimestamp}.
      */
     @UpdateTimestamp
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
+    @Column(name = "updated_dt", nullable = false)
+    private LocalDateTime updatedDt;
 }

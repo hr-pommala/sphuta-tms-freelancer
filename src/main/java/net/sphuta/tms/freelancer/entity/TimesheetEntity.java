@@ -26,8 +26,7 @@ import java.util.List;
                 columnNames = {"project_id", "period_start", "period_end"}
         )
 )
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -44,7 +43,7 @@ public class TimesheetEntity {
     /**
      * ID of the project this timesheet belongs to.
      */
-    @Column(name = "project_id", nullable = false)
+    @Column(name = "project_id", insertable = false, updatable = false)
     private int projectId;
 
     /**
@@ -97,4 +96,9 @@ public class TimesheetEntity {
     )
     @Builder.Default
     private List<TimeEntryEntity> entries = new ArrayList<>();
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "project_id", nullable = false)
+    private ProjectEntity project;
+
 }

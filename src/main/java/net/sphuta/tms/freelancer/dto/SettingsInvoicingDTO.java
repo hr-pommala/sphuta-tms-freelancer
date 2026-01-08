@@ -102,5 +102,5 @@ public record SettingsInvoicingDTO(
         String logoFileId,
 
         @Schema(description = "Timestamp when the settings were last updated (set server-side)", accessMode = Schema.AccessMode.READ_ONLY)
-        LocalDateTime updatedAt
+        LocalDateTime updatedDt
 ) {}

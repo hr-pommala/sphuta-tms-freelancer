@@ -54,7 +54,8 @@ public class TmsTimesheetMappers {
 
         var dailyTotals = computeDailyTotals(entries);
 
-        String projectName = "Project-" + t.getProjectId();
+        //String projectName = "Project-" + t.getProjectId();
+        String projectName = t.getProject() != null ? t.getProject().getName() : "Unknown";
 
         var dto = new TmsTimesheetDto(
                 t.getProjectId(),
@@ -101,12 +102,16 @@ public class TmsTimesheetMappers {
             log.trace("toTimeEntryDto: entryId={} task not available (null or not initialised)", e.getId());
         }
 
-        // derive project name (if you have a relation or service to fetch it)
-        String projectName = null;
-        if (e.getProjectId() != null) {
-            projectName = " " + e.getProjectId();
-            // if you have ProjectEntity relation: projectName = e.getProject().getName();
-        }
+//        // derive project name (if you have a relation or service to fetch it)
+//        String projectName = null;
+//        if (e.getProjectId() != null) {
+//            projectName = " " + e.getProjectId();
+//            // if you have ProjectEntity relation: projectName = e.getProject().getName();
+//        }
+        String projectName = e.getTimesheet() != null && e.getTimesheet().getProject() != null
+                ? e.getTimesheet().getProject().getName()
+                : null;
+
         // IMPORTANT: Constructor order matches TimeEntryDto record definition
 
         return new TimeEntryDto(

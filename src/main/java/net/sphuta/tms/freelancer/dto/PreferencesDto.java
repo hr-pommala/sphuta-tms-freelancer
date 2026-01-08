@@ -29,6 +29,6 @@ public record PreferencesDto(
         Rounding rounding,
 
         @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-        LocalDateTime updatedAt
+        LocalDateTime updateDt
 
 ) {}

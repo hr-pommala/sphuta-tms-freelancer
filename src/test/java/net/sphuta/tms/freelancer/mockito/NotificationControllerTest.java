@@ -2,13 +2,13 @@ package net.sphuta.tms.freelancer.mockito;
 
 import net.sphuta.tms.freelancer.controller.NotificationController;
 import net.sphuta.tms.freelancer.dto.*;
+import net.sphuta.tms.freelancer.response.TmsApiResponse;
 import net.sphuta.tms.freelancer.service.NotificationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.springframework.http.ResponseEntity;
 
 import java.util.List;
 import java.util.Map;
@@ -44,12 +44,13 @@ class NotificationControllerTest {
         // Mock service
         when(svc.listUnreadNotifications(userId, 20, 0)).thenReturn(mockResponse);
 
-        // Call controller
-        ResponseEntity<NotificationListResponse> response = controller.listNotifications(userId, 20, 0);
+        // Call controller (returns TmsApiResponse)
+        TmsApiResponse<NotificationListResponse> response = controller.listNotifications(userId, 20, 0);
 
         // Assertions
-        assertEquals(200, response.getStatusCodeValue());
-        assertEquals(mockResponse, response.getBody());
+        assertEquals(200, response.statusCode());
+        assertTrue(response.success());
+        assertEquals(mockResponse, response.data());
         verify(svc, times(1)).listUnreadNotifications(userId, 20, 0);
     }
 
@@ -68,13 +69,14 @@ class NotificationControllerTest {
                 1
         );
 
-        when(svc.createNotification(request)).thenReturn(100L);
+        when(svc.createNotification(request, userId)).thenReturn(100L);
 
-        ResponseEntity<Map<String, Object>> response = controller.createNotification(userId, request);
+        TmsApiResponse<Map<String, Object>> response = controller.createNotification(userId, request);
 
-        assertEquals(200, response.getStatusCodeValue());
-        assertEquals(100L, response.getBody().get("id"));
-        verify(svc, times(1)).createNotification(request);
+        assertEquals(201, response.statusCode());
+        assertTrue(response.success());
+        assertEquals(100L, response.data().get("id"));
+        verify(svc, times(1)).createNotification(request, userId);
     }
 
     @Test
@@ -91,10 +93,11 @@ class NotificationControllerTest {
                 1
         );
 
-        ResponseEntity<Map<String, Object>> response = controller.createNotification(userId, request);
+        TmsApiResponse<Map<String, Object>> response = controller.createNotification(userId, request);
 
-        assertEquals(400, response.getStatusCodeValue());
-        assertTrue(response.getBody().containsKey("error"));
+        assertEquals(400, response.statusCode());
+        assertFalse(response.success());
+        assertTrue(response.message().toLowerCase().contains("user id mismatch") || response.message().toLowerCase().contains("invalid"));
         verifyNoInteractions(svc);
     }
 
@@ -104,10 +107,11 @@ class NotificationControllerTest {
 
         doNothing().when(svc).markOneRead(notificationId);
 
-        ResponseEntity<String> response = controller.markOneRead(notificationId);
+        TmsApiResponse<String> response = controller.markOneRead(notificationId);
 
-        assertEquals(200, response.getStatusCodeValue());
-        assertEquals("Notification 101 marked as read", response.getBody());
+        assertEquals(200, response.statusCode());
+        assertTrue(response.success());
+        assertEquals("Notification 101 marked as read", response.message());
         verify(svc, times(1)).markOneRead(notificationId);
     }
 
@@ -115,10 +119,11 @@ class NotificationControllerTest {
     void testMarkAllRead() {
         doNothing().when(svc).markAllRead();
 
-        ResponseEntity<Void> response = controller.markAllRead();
+        TmsApiResponse<Void> response = controller.markAllRead();
 
-        assertEquals(200, response.getStatusCodeValue());
-        assertNull(response.getBody());
+        assertEquals(200, response.statusCode());
+        assertTrue(response.success());
+        assertNull(response.data());
         verify(svc, times(1)).markAllRead();
     }
 }

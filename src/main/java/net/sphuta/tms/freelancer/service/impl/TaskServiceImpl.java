@@ -1,6 +1,7 @@
 package net.sphuta.tms.freelancer.service.impl;
 
 import lombok.extern.slf4j.Slf4j;
+import net.sphuta.tms.freelancer.constants.TmsMessages;
 import net.sphuta.tms.freelancer.dto.TaskDto;
 import net.sphuta.tms.freelancer.entity.ProjectEntity;
 import net.sphuta.tms.freelancer.entity.TaskEntity;
@@ -61,7 +62,7 @@ public class TaskServiceImpl implements TaskService {
         ProjectEntity project = projectRepository.findById(dto.projectId())
                 .orElseThrow(() -> {
                     log.error("Project not found while creating task, projectId={}", dto.projectId());
-                    return new NotFoundException("Project not found: " + dto.projectId());
+                    return new NotFoundException(TmsMessages.PROJECT_NOT_FOUND + dto.projectId());
                 });
 
         // map dto -> entity (this will set projectId on entity)
@@ -97,7 +98,7 @@ public class TaskServiceImpl implements TaskService {
         var existing = taskRepository.findById(id)
                 .orElseThrow(() -> {
                     log.error("Task not found for update, id={}", id);
-                    return new NotFoundException("Task not found: " + id);
+                    return new NotFoundException(TmsMessages.TASK_NOT_FOUND + id);
                 });
 
         if (dto.taskName() != null) existing.setTaskName(dto.taskName());
@@ -107,7 +108,7 @@ public class TaskServiceImpl implements TaskService {
         if (dto.projectId() != null) {
             if (!projectRepository.existsById(dto.projectId())) {
                 log.error("Project not found while updating task id={}, projectId={}", id, dto.projectId());
-                throw new NotFoundException("Project not found: " + dto.projectId());
+                throw new NotFoundException(TmsMessages.PROJECT_NOT_FOUND + dto.projectId());
             }
             existing.setProjectId(dto.projectId());
         }
@@ -132,7 +133,7 @@ public class TaskServiceImpl implements TaskService {
         TaskEntity e = taskRepository.findById(id)
                 .orElseThrow(() -> {
                     log.error("Task not found while fetching, id={}", id);
-                    return new NotFoundException("Task not found: " + id);
+                    return new NotFoundException(TmsMessages.TASK_NOT_FOUND + id);
                 });
 
         log.debug("Fetched task entity: {}", e);
@@ -153,7 +154,7 @@ public class TaskServiceImpl implements TaskService {
 
         if (!projectRepository.existsById(projectId)) {
             log.error("Project not found while listing tasks, projectId={}", projectId);
-            throw new NotFoundException("Project not found: " + projectId);
+            throw new NotFoundException(TmsMessages.PROJECT_NOT_FOUND + projectId);
         }
 
         List<TaskEntity> list = taskRepository.findByProjectId(projectId);
@@ -190,7 +191,7 @@ public class TaskServiceImpl implements TaskService {
         var e = taskRepository.findById(id)
                 .orElseThrow(() -> {
                     log.error("Task not found for deletion, id={}", id);
-                    return new NotFoundException("Task not found: " + id);
+                    return new NotFoundException(TmsMessages.TASK_NOT_FOUND + id);
                 });
 
         taskRepository.delete(e);

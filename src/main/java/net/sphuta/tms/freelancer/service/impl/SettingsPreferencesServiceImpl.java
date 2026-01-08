@@ -1,7 +1,7 @@
 package net.sphuta.tms.freelancer.service.impl;
 
 import lombok.extern.slf4j.Slf4j;
-import net.sphuta.tms.freelancer.constants.AppConstants;
+import net.sphuta.tms.freelancer.constants.TmsMessages;
 import net.sphuta.tms.freelancer.dto.PreferencesDto;
 import net.sphuta.tms.freelancer.entity.SettingsPreferences;
 import net.sphuta.tms.freelancer.exception.NotFoundException;
@@ -86,7 +86,7 @@ public class SettingsPreferencesServiceImpl implements SettingsPreferencesServic
         SettingsPreferences entity = repository.findById(userId)
                 .orElseThrow(() -> {
                     log.error("Preferences not found for userId={}", userId);
-                    return new NotFoundException(AppConstants.MSG_PREF_NOT_FOUND);
+                    return new NotFoundException(TmsMessages.PREFERENCES_NOT_FOUND);
                 });
 
         log.info("Preferences fetched successfully for userId={}", userId);
@@ -126,7 +126,7 @@ public class SettingsPreferencesServiceImpl implements SettingsPreferencesServic
         SettingsPreferences entity = repository.findById(userId)
                 .orElseThrow(() -> {
                     log.error("Preferences not found for userId={} during update", userId);
-                    return new NotFoundException(AppConstants.MSG_PREF_NOT_FOUND);
+                    return new NotFoundException(TmsMessages.PREFERENCES_NOT_FOUND);
                 });
 
         // ✅ Use mapper method instead of manually setting fields
@@ -153,7 +153,7 @@ public class SettingsPreferencesServiceImpl implements SettingsPreferencesServic
 
         if (!repository.existsByUserId(userId)) {
             log.error("Cannot delete. Preferences not found for userId={}", userId);
-            throw new NotFoundException(AppConstants.MSG_PREF_NOT_FOUND);
+            throw new NotFoundException(TmsMessages.PREFERENCES_NOT_FOUND);
         }
 
         repository.deleteById(userId);
